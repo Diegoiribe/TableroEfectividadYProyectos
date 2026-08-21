@@ -1,0 +1,47 @@
+import { useState } from 'react';
+
+export default function AddForm({ type, onSubmit, onCancel }) {
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
+  const submit = (event) => {
+    event.preventDefault();
+    if (!name.trim()) return;
+    onSubmit({ name: name.trim(), url: url.trim() });
+  };
+  return (
+    <form className="addForm" onSubmit={submit}>
+      <label>
+        {type === 'column'
+          ? 'Nombre del encabezado'
+          : type === 'member'
+            ? 'Nombre del integrante'
+            : 'Nombre'}
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={type === 'row' ? 'Nueva actividad' : 'Nombre'}
+        />
+      </label>
+      {(type === 'row' || type === 'resource') && (
+        <label>
+          Enlace <span>Opcional</span>
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://..."
+          />
+        </label>
+      )}
+      <div className="formActions">
+        <button type="button" onClick={onCancel}>
+          Cancelar
+        </button>
+        <button className="confirm" type="submit">
+          Agregar
+        </button>
+      </div>
+    </form>
+  );
+}
