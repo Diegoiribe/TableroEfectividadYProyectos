@@ -5,7 +5,8 @@ export default function Popover({
   onClose,
   title,
   children,
-  align = 'left'
+  align = 'left',
+  placement = 'bottom'
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function Popover({
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className={`popover ${align}`} ref={ref}>
+    <div className={`popover ${align} ${placement}`} ref={ref}>
       <div className="popoverArrow" />
       <h4>{title}</h4>
       {children}

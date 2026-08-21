@@ -19,3 +19,17 @@ export function ExternalIcon() {
     </svg>
   );
 }
+export function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24">
+      <path d="m7 10 5 5 5-5" />
+    </svg>
+  );
+}
+export function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24">
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}

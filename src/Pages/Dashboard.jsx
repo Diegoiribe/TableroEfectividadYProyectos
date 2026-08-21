@@ -3,14 +3,24 @@ import TeamMembers from '../components/TeamMembers';
 import TrackerTable from '../components/TrackerTable';
 import ViewSelect from '../components/ViewSelect';
 import { initialTables, views } from '../data/dashboardData';
+import { useDashboardStorage } from '../hooks/useDashboardStorage';
 
 export default function Dashboard() {
-  const [view, setView] = useState('itinerary');
-  const [members, setMembers] = useState(['Diego', 'Esteban', 'Alfredo']);
-  const [tables, setTables] = useState(initialTables);
+  const [view, setView] = useState('training');
+  const [dashboard, setDashboard] = useDashboardStorage({
+    members: ['Diego', 'Esteban', 'JR'],
+    tables: initialTables
+  });
+  const { members, tables } = dashboard;
   const table = tables[view];
   const update = (changes) =>
-    setTables((prev) => ({ ...prev, [view]: { ...prev[view], ...changes } }));
+    setDashboard((current) => ({
+      ...current,
+      tables: {
+        ...current.tables,
+        [view]: { ...current.tables[view], ...changes }
+      }
+    }));
   const addRow = ({ name, url }) =>
     update({
       rows: [
@@ -28,16 +38,19 @@ export default function Dashboard() {
       columns: [...table.columns, name],
       rows: table.rows.map((row) => ({ ...row, values: [...row.values, ''] }))
     });
-  const changeCell = (ri, ci) => {
-    const current = table.rows[ri].values[ci];
-    const value =
-      table.columns[ci].toLowerCase() === 'date'
-        ? new Date().toLocaleDateString('es-MX')
-        : current === ''
-          ? 'on-course'
-          : current === 'on-course'
-            ? 'done'
-            : '';
+  const renameRow = (rowId, name) =>
+    update({
+      rows: table.rows.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              name,
+              resource: row.resource ? { ...row.resource, label: name } : null
+            }
+          : row
+      )
+    });
+  const changeCell = (ri, ci, value) => {
     update({
       rows: table.rows.map((r, i) =>
         i === ri
@@ -50,18 +63,24 @@ export default function Dashboard() {
     <main className="page">
       <header>
         <div className="wordmark">
-          <h1>Efectividad</h1>
+          <span>Tablero interno</span>
+          <h1>Efectividad y Proyectos</h1>
           <p>Seguimiento de proyectos</p>
         </div>
         <TeamMembers
           members={members}
-          onAdd={(name) => setMembers([...members, name])}
+          onAdd={(name) =>
+            setDashboard((current) => ({
+              ...current,
+              members: [...current.members, name]
+            }))
+          }
         />
       </header>
       <ViewSelect value={view} onChange={setView} />
       <section className="note">
         <div className="noteTitle">
-          <span>EFECTIVIDAD Y PROYECTOS</span>
+          <span>ÁREA DE TRABAJO</span>
           <h2>{views.find((v) => v[0] === view)[1]}</h2>
           <p>Seguimiento de avances, recursos y responsables.</p>
         </div>
@@ -70,10 +89,7 @@ export default function Dashboard() {
           isVideo={view === 'videos'}
           onAddRow={addRow}
           onAddColumn={addColumn}
-          onAddResource={(resource) =>
-            resource.url &&
-            update({ resources: [...(table.resources ?? []), resource] })
-          }
+          onRenameRow={renameRow}
           onCellChange={changeCell}
         />
       </section>

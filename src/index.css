@@ -4,18 +4,14 @@
 }
 body {
   margin: 0;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'SF Pro Display',
-    'Segoe UI',
-    sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+    'Segoe UI', sans-serif;
   color: #202126;
   background: #f3f4f6;
 }
 button,
-input {
+input,
+select {
   font: inherit;
 }
 button {

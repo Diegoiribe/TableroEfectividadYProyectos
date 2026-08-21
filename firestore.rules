@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function validColor(color) {
+      return color is string && color.matches('^#[0-9a-fA-F]{6}$');
+    }
+
+    function realMember(uid) {
+      return uid in ['diego-iribe', 'esteban-espinoza', 'jose-cruz'];
+    }
+
+    function validDateKey(value) {
+      return value is string && value.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if realMember(uid)
+        && request.resource.data.active == true
+        && validColor(request.resource.data.color);
+      allow update: if realMember(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['color', 'updatedAt'])
+        && validColor(request.resource.data.color);
+      allow delete: if uid in ['sofia', 'marco', 'elena'];
+    }
+
+    match /config/{document} {
+      allow read: if true;
+      allow create, update: if document == 'homeOffice'
+        && request.resource.data.teamVersion == '2026-08-real-team-v1'
+        && request.resource.data.referenceWeek == '2026-08-17'
+        && request.resource.data.rotationEnabled == true;
+    }
+
+    match /swapRequests/{requestId} {
+      allow read: if true;
+      allow create: if request.resource.data.status == 'pending'
+        && request.resource.data.requesterId != request.resource.data.recipientId
+        && validDateKey(request.resource.data.requesterDate)
+        && validDateKey(request.resource.data.recipientDate)
+        && validDateKey(request.resource.data.weekId);
+      allow update: if resource.data.status == 'pending'
+        && request.resource.data.status in ['accepted', 'rejected', 'cancelled']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt']);
+    }
+
+    match /acceptedSwaps/{swapId} {
+      allow read: if true;
+      allow create: if request.resource.data.requestId is string
+        && validDateKey(request.resource.data.weekId);
+      allow update, delete: if false;
+    }
+
+    match /auditEvents/{eventId} {
+      allow read: if false;
+      allow create: if request.resource.data.type in ['swap.requested', 'swap.accepted', 'swap.cancelled'];
+      allow update, delete: if false;
+    }
+
+    match /dashboards/principal {
+      allow read, write: if true;
+    }
+  }
+}

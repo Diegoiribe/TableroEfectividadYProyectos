@@ -14,8 +14,8 @@ export default function AddForm({ type, onSubmit, onCancel }) {
         {type === 'column'
           ? 'Nombre del encabezado'
           : type === 'member'
-            ? 'Nombre del integrante'
-            : 'Nombre'}
+          ? 'Nombre del integrante'
+          : 'Nombre'}
         <input
           autoFocus
           value={name}

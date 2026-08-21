@@ -1,58 +1,105 @@
-import { useMemo, useState } from 'react';
-import AddForm from './AddForm';
-import { ExternalIcon, LinkIcon, PlusIcon } from './Icons';
-import Popover from './Popover';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ExternalIcon, LinkIcon } from './Icons';
 
-export default function ResourcePanel({ rows = [], extraResources = [], onAdd }) {
-  const [open, setOpen] = useState(false);
+export default function ResourcePanel({ rows = [] }) {
+  const [openResource, setOpenResource] = useState(null);
+  const panelRef = useRef(null);
   const resources = useMemo(() => {
-    const all = [
-      ...rows.map((r) => r.resource).filter(Boolean),
-      ...extraResources
-    ];
-    return [
-      ...new Map(all.filter((r) => r.url).map((r) => [r.url, r])).values()
-    ];
-  }, [rows, extraResources]);
+    const grouped = new Map();
+    rows.forEach((row) => {
+      if (!row.resource?.url) return;
+      const resource = grouped.get(row.resource.url) ?? {
+        url: row.resource.url,
+        labels: []
+      };
+      if (!resource.labels.includes(row.name)) resource.labels.push(row.name);
+      grouped.set(row.resource.url, resource);
+    });
+    return [...grouped.values()];
+  }, [rows]);
+
+  useEffect(() => {
+    const close = (event) => {
+      if (!panelRef.current?.contains(event.target)) setOpenResource(null);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  const hostname = (url) => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return url;
+    }
+  };
+
   return (
-    <aside className="resources">
+    <aside className="resources" ref={panelRef}>
       <div className="resourceHead">
         <h3>Recursos</h3>
-        <div className="anchor">
-          <button className="miniButton" onClick={() => setOpen(!open)}>
-            <PlusIcon />
-          </button>
-          <Popover
-            open={open}
-            onClose={() => setOpen(false)}
-            title="Nuevo recurso"
-            align="right"
-          >
-            <AddForm
-              type="resource"
-              onCancel={() => setOpen(false)}
-              onSubmit={({ name, url }) => {
-                onAdd({ label: name, url });
-                setOpen(false);
-              }}
-            />
-          </Popover>
-        </div>
+        <span className="resourceCount">{resources.length}</span>
       </div>
       <div className="resourceList">
-        {resources.map((r) => (
-          <a href={r.url} target="_blank" rel="noreferrer" key={r.url}>
+        {resources.map((resource) => (
+          <div className="resourceItem" key={resource.url}>
             <i>
               <LinkIcon />
             </i>
-            <span>
-              {r.label}
-              <small>{new URL(r.url).hostname}</small>
-            </span>
-            <ExternalIcon />
-          </a>
+            <div className="resourceInfo">
+              <div className="resourceTitle">
+                <span>{resource.labels[0]}</span>
+                {resource.labels.length > 1 && (
+                  <button
+                    type="button"
+                    className="resourceMore"
+                    aria-expanded={openResource === resource.url}
+                    aria-label={`Ver ${
+                      resource.labels.length - 1
+                    } nombres relacionados`}
+                    onClick={() =>
+                      setOpenResource((current) =>
+                        current === resource.url ? null : resource.url
+                      )
+                    }
+                  >
+                    +{resource.labels.length - 1}
+                  </button>
+                )}
+              </div>
+              <small>{hostname(resource.url)}</small>
+              {resource.labels.length > 1 && (
+                <div
+                  className={`resourceNames ${
+                    openResource === resource.url ? 'open' : ''
+                  }`}
+                >
+                  <strong>Relacionado con</strong>
+                  {resource.labels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <a
+              className="resourceExternal"
+              href={resource.url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Abrir recurso de ${resource.labels[0]}`}
+            >
+              <ExternalIcon />
+            </a>
+          </div>
         ))}
-        {!resources.length && <p>Los archivos y enlaces aparecerán aquí.</p>}
+        {!resources.length && (
+          <div className="resourceEmpty">
+            <i>
+              <LinkIcon />
+            </i>
+            <p>Los enlaces que agregues en una fila aparecerán aquí.</p>
+          </div>
+        )}
       </div>
     </aside>
   );

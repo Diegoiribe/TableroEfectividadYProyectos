@@ -9,11 +9,24 @@ export default function TrackerTable({
   isVideo,
   onAddRow,
   onAddColumn,
-  onAddResource,
+  onRenameRow,
   onCellChange
 }) {
   const [rowOpen, setRowOpen] = useState(false);
   const [columnOpen, setColumnOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
+  const [rowName, setRowName] = useState('');
+
+  const startRename = (row) => {
+    setEditingRow(row.id);
+    setRowName(row.name);
+  };
+
+  const finishRename = () => {
+    const name = rowName.trim();
+    if (name && editingRow !== null) onRenameRow(editingRow, name);
+    setEditingRow(null);
+  };
   return (
     <div className="board">
       <div className="tableArea">
@@ -22,38 +35,37 @@ export default function TrackerTable({
             <thead>
               <tr>
                 <th>Nombre</th>
-                {table.columns.map((c) => (
-                  <th key={c}>{c}</th>
+                {table.columns.map((column) => (
+                  <th key={column}>{column}</th>
                 ))}
-                <th className="addColumn">
-                  <div className="anchor">
-                    <button onClick={() => setColumnOpen(!columnOpen)}>
-                      <PlusIcon />
-                    </button>
-                    <Popover
-                      open={columnOpen}
-                      onClose={() => setColumnOpen(false)}
-                      title="Agregar encabezado"
-                      align="right"
-                    >
-                      <AddForm
-                        type="column"
-                        onCancel={() => setColumnOpen(false)}
-                        onSubmit={({ name }) => {
-                          onAddColumn(name);
-                          setColumnOpen(false);
-                        }}
-                      />
-                    </Popover>
-                  </div>
-                </th>
+                <th className="tableSpacer" />
               </tr>
             </thead>
             <tbody>
               {table.rows.map((r, ri) => (
                 <tr key={r.id}>
-                  <td>
-                    {isVideo && r.resource?.url ? (
+                  <td
+                    className="rowNameCell"
+                    title="Doble clic para editar"
+                    onDoubleClick={(event) => {
+                      event.preventDefault();
+                      startRename(r);
+                    }}
+                  >
+                    {editingRow === r.id ? (
+                      <input
+                        className="rowNameInput"
+                        autoFocus
+                        value={rowName}
+                        onChange={(event) => setRowName(event.target.value)}
+                        onBlur={finishRename}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') finishRename();
+                          if (event.key === 'Escape') setEditingRow(null);
+                        }}
+                        onDoubleClick={(event) => event.stopPropagation()}
+                      />
+                    ) : isVideo && r.resource?.url ? (
                       <a href={r.resource.url} target="_blank" rel="noreferrer">
                         {r.name}
                         <ExternalIcon />
@@ -62,20 +74,41 @@ export default function TrackerTable({
                       r.name
                     )}
                   </td>
-                  {table.columns.map((_, ci) => (
+                  {table.columns.map((column, ci) => (
                     <td key={ci}>
-                      <button
-                        className={
-                          r.values[ci] === 'done'
-                            ? 'done'
-                            : r.values[ci] === 'on-course'
+                      {column.toLowerCase() === 'date' ? (
+                        <input
+                          className="dateField"
+                          aria-label={`Fecha de ${r.name}`}
+                          value={r.values[ci]}
+                          placeholder="dd/mm/aa"
+                          onChange={(event) =>
+                            onCellChange(ri, ci, event.target.value)
+                          }
+                        />
+                      ) : (
+                        <select
+                          aria-label={`Estado de ${r.name} para ${column}`}
+                          className={`statusSelect ${
+                            r.values[ci] === 'done'
+                              ? 'done'
+                              : r.values[ci] === 'on-course'
                               ? 'course'
+                              : r.values[ci] === 'fail'
+                              ? 'fail'
                               : ''
-                        }
-                        onClick={() => onCellChange(ri, ci)}
-                      >
-                        {r.values[ci] || '—'}
-                      </button>
+                          }`}
+                          value={r.values[ci]}
+                          onChange={(event) =>
+                            onCellChange(ri, ci, event.target.value)
+                          }
+                        >
+                          <option value="">—</option>
+                          <option value="on-course">On course</option>
+                          <option value="done">Done</option>
+                          <option value="fail">Fail</option>
+                        </select>
+                      )}
                     </td>
                   ))}
                   <td />
@@ -84,32 +117,55 @@ export default function TrackerTable({
             </tbody>
           </table>
         </div>
-        <div className="anchor rowAnchor">
-          <button className="addRow" onClick={() => setRowOpen(!rowOpen)}>
-            <PlusIcon />
-            <span>Agregar fila</span>
-          </button>
-          <Popover
-            open={rowOpen}
-            onClose={() => setRowOpen(false)}
-            title="Nueva fila"
-          >
-            <AddForm
-              type="row"
-              onCancel={() => setRowOpen(false)}
-              onSubmit={(data) => {
-                onAddRow(data);
-                setRowOpen(false);
-              }}
-            />
-          </Popover>
+        <div className="rowActions">
+          <div className="anchor rowAnchor">
+            <button className="addRow" onClick={() => setRowOpen(!rowOpen)}>
+              <PlusIcon />
+              <span>Agregar fila</span>
+            </button>
+            <Popover
+              open={rowOpen}
+              onClose={() => setRowOpen(false)}
+              title="Nueva fila"
+              placement="top"
+            >
+              <AddForm
+                type="row"
+                onCancel={() => setRowOpen(false)}
+                onSubmit={(data) => {
+                  onAddRow(data);
+                  setRowOpen(false);
+                }}
+              />
+            </Popover>
+          </div>
+          <div className="anchor rowAnchor">
+            <button
+              className="addRow"
+              onClick={() => setColumnOpen(!columnOpen)}
+            >
+              <PlusIcon />
+              <span>Agregar columna</span>
+            </button>
+            <Popover
+              open={columnOpen}
+              onClose={() => setColumnOpen(false)}
+              title="Agregar columna"
+              placement="top"
+            >
+              <AddForm
+                type="column"
+                onCancel={() => setColumnOpen(false)}
+                onSubmit={({ name }) => {
+                  onAddColumn(name);
+                  setColumnOpen(false);
+                }}
+              />
+            </Popover>
+          </div>
         </div>
       </div>
-      <ResourcePanel
-        rows={table.rows}
-        extraResources={table.resources}
-        onAdd={onAddResource}
-      />
+      <ResourcePanel rows={table.rows} />
     </div>
   );
 }
