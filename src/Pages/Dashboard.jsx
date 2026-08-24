@@ -2,7 +2,7 @@ import { useState } from 'react';
 import TeamMembers from '../components/TeamMembers';
 import TrackerTable from '../components/TrackerTable';
 import ViewSelect from '../components/ViewSelect';
-import { initialTables, views } from '../data/dashboardData';
+import { initialTables } from '../data/dashboardData';
 import { useDashboardStorage } from '../hooks/useDashboardStorage';
 
 export default function Dashboard() {
@@ -64,29 +64,33 @@ export default function Dashboard() {
       <header>
         <div className="wordmark">
           <span>Tablero interno</span>
-          <h1>Efectividad y Proyectos</h1>
+          <h1 className="font-extralight text-neutral-300 ">Tablero Interno</h1>
           <p>Seguimiento de proyectos</p>
         </div>
-        <TeamMembers
-          members={members}
-          onAdd={(name) =>
-            setDashboard((current) => ({
-              ...current,
-              members: [...current.members, name]
-            }))
-          }
-        />
+        <div className="headerActions">
+          <nav className="headerNav" aria-label="Secciones del tablero">
+            <a href="#docs">Docs</a>
+            <a href="#tables">Table</a>
+          </nav>
+          <TeamMembers
+            members={members}
+            onAdd={(name) =>
+              setDashboard((current) => ({
+                ...current,
+                members: [...current.members, name]
+              }))
+            }
+          />
+        </div>
       </header>
-      <ViewSelect value={view} onChange={setView} />
-      <section className="note">
+      <section className="note" id="tables">
         <div className="noteTitle">
           <span>ÁREA DE TRABAJO</span>
-          <h2>{views.find((v) => v[0] === view)[1]}</h2>
+          <ViewSelect value={view} onChange={setView} title />
           <p>Seguimiento de avances, recursos y responsables.</p>
         </div>
         <TrackerTable
           table={table}
-          isVideo={view === 'videos'}
           onAddRow={addRow}
           onAddColumn={addColumn}
           onRenameRow={renameRow}

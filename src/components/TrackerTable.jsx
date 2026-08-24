@@ -6,7 +6,6 @@ import { ExternalIcon, PlusIcon } from './Icons';
 
 export default function TrackerTable({
   table,
-  isVideo,
   onAddRow,
   onAddColumn,
   onRenameRow,
@@ -65,10 +64,17 @@ export default function TrackerTable({
                         }}
                         onDoubleClick={(event) => event.stopPropagation()}
                       />
-                    ) : isVideo && r.resource?.url ? (
-                      <a href={r.resource.url} target="_blank" rel="noreferrer">
-                        {r.name}
-                        <ExternalIcon />
+                    ) : r.resource?.url ? (
+                      <a
+                        className="rowLink"
+                        href={r.resource.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <span className="rowLinkLabel">{r.name}</span>
+                        <span className="rowExternalIcon">
+                          <ExternalIcon />
+                        </span>
                       </a>
                     ) : (
                       r.name

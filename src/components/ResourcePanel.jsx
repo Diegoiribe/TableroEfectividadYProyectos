@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalIcon, LinkIcon } from './Icons';
+import { ExternalIcon, LinkIcon, ResourceIcon } from './Icons';
 
 export default function ResourcePanel({ rows = [] }) {
   const [openResource, setOpenResource] = useState(null);
@@ -35,7 +35,7 @@ export default function ResourcePanel({ rows = [] }) {
   };
 
   return (
-    <aside className="resources" ref={panelRef}>
+    <aside className="resources" id="docs" ref={panelRef}>
       <div className="resourceHead">
         <h3>Recursos</h3>
         <span className="resourceCount">{resources.length}</span>
@@ -44,11 +44,13 @@ export default function ResourcePanel({ rows = [] }) {
         {resources.map((resource) => (
           <div className="resourceItem" key={resource.url}>
             <i>
-              <LinkIcon />
+              <ResourceIcon label={resource.labels[0]} url={resource.url} />
             </i>
             <div className="resourceInfo">
               <div className="resourceTitle">
-                <span>{resource.labels[0]}</span>
+                <a href={resource.url} target="_blank" rel="noreferrer">
+                  {resource.labels[0]}
+                </a>
                 {resource.labels.length > 1 && (
                   <button
                     type="button"

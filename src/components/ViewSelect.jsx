@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { views } from '../data/dashboardData';
 import { CheckIcon, ChevronIcon } from './Icons';
 
-export default function ViewSelect({ value, onChange }) {
+export default function ViewSelect({ value, onChange, title = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = views.find(([id]) => id === value)?.[1];
@@ -21,11 +21,12 @@ export default function ViewSelect({ value, onChange }) {
   }, [open]);
 
   return (
-    <div className="viewPicker" ref={ref}>
-      <span className="viewLabel">Vista</span>
+    <div className={`viewPicker ${title ? 'titleViewPicker' : ''}`} ref={ref}>
+      {!title && <span className="viewLabel">Vista</span>}
       <button
         type="button"
-        className="viewTrigger"
+        className={`viewTrigger ${title ? 'titleViewTrigger' : ''}`}
+        aria-label={title ? `Cambiar vista: ${selected}` : undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}

@@ -1,23 +1,73 @@
 :root {
-  --ink: #18212b;
-  --muted: #7c8795;
-  --line: #e6edf3;
-  --accent: #55a9ed;
-  --accent-deep: #2488db;
-  --accent-soft: #edf7ff;
+  --ink: #1d1d1f;
+  --muted: #6e6e73;
+  --line: #e5e5e7;
+  --accent: #6e6e73;
+  --accent-deep: #424245;
+  --accent-soft: #f0f0f2;
 }
 .page {
   min-height: 100vh;
-  padding: 58px max(24px, calc((100vw - 1120px) / 2)) 90px;
-  background: radial-gradient(circle at 76% 0%, #e8f6ff 0, transparent 31rem),
-    #f5f8fa;
+  padding: 0 max(24px, calc((100vw - 1180px) / 2)) 96px;
+  background: #fff;
   color: var(--ink);
 }
 header {
-  display: flex;
-  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'wordmark actions';
   align-items: center;
-  margin-bottom: 42px;
+  width: 100vw;
+  min-height: 72px;
+  margin-left: calc(50% - 50vw);
+  margin-bottom: 72px;
+  padding: 0 max(24px, calc((100vw - 1180px) / 2));
+  border-bottom: 1px solid #d2d2d7;
+  background: #ffffffeb;
+  backdrop-filter: saturate(180%) blur(20px);
+}
+.wordmark {
+  grid-area: wordmark;
+  min-width: 0;
+}
+.headerActions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.headerNav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.headerNav a {
+  position: relative;
+  color: #424245;
+  font-size: 12px;
+  text-decoration: none;
+}
+.headerNav a:hover,
+.headerNav a:focus-visible {
+  color: #1d1d1f;
+}
+.headerNav a:after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -25px;
+  left: 0;
+  height: 1px;
+  background: #1d1d1f;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.headerNav a:hover:after,
+.headerNav a:focus-visible:after {
+  opacity: 1;
 }
 .wordmark > span,
 .teamLabel {
@@ -28,12 +78,16 @@ header {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+.wordmark > span,
+.wordmark p {
+  display: none;
+}
 .wordmark h1 {
-  font-size: clamp(32px, 4vw, 48px);
-  font-weight: 680;
-  margin: 7px 0 0;
-  letter-spacing: -0.045em;
-  line-height: 1.04;
+  font-size: 26px;
+  font-weight: 650;
+  margin: 0;
+  letter-spacing: -0.025em;
+  line-height: 1;
 }
 .wordmark p {
   font-size: 13px;
@@ -42,13 +96,19 @@ header {
 }
 .teamBlock {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 .teamLabel {
-  color: #98a3ae;
-  font-size: 9px;
+  color: #424245;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .team {
   display: flex;
@@ -56,19 +116,19 @@ header {
 }
 .avatar,
 .circleButton {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   margin-left: -9px;
-  border: 3px solid #f5f8fa;
+  border: 2px solid #fff;
   background: #fff;
   color: #176ba8;
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.04em;
-  box-shadow: 0 4px 14px #27455c14;
+  box-shadow: none;
   transition: transform 0.2s ease;
 }
 .avatar:hover {
@@ -76,10 +136,11 @@ header {
   z-index: 10 !important;
 }
 .avatar-1 {
-  background: #e4f4ff;
+  background: #ededf0;
+  color: #5d5d62;
 }
 .avatar-2 {
-  background: #247ec1;
+  background: #6e6e73;
   color: #fff;
 }
 .avatar-3 {
@@ -91,17 +152,15 @@ header {
   color: #26745e;
 }
 .circleButton {
-  margin-left: 9px;
-  border: 1px solid #d8e2ea;
-  color: #5e7181;
-  background: #ffffffcc;
-  box-shadow: 0 6px 20px #27455c12;
+  margin-left: 12px;
+  border: 0;
+  color: #fff;
+  background: var(--accent);
   transition: 0.2s ease;
 }
 .circleButton:hover {
-  color: var(--accent-deep);
-  border-color: #b8daf5;
-  background: #fff;
+  color: #fff;
+  background: #515154;
   transform: translateY(-1px);
 }
 .circleButton svg,
@@ -118,8 +177,8 @@ header {
   position: relative;
 }
 .viewPicker {
-  width: 254px;
-  margin-bottom: 24px;
+  width: 292px;
+  margin-bottom: 0;
   position: relative;
   z-index: 12;
 }
@@ -137,22 +196,21 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid #d9e4ec;
-  border-radius: 14px;
-  padding: 13px 14px 13px 16px;
-  background: #ffffffde;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  padding: 15px 16px 15px 18px;
+  background: #f5f5f7;
   color: #263645;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 7px 25px #375b7310, inset 0 1px #ffffff;
-  backdrop-filter: blur(16px);
+  box-shadow: none;
   outline: none;
   transition: 0.2s ease;
 }
 .viewTrigger:hover,
 .viewTrigger:focus-visible {
-  border-color: #9fd0f4;
-  box-shadow: 0 0 0 4px #55a9ed18, 0 7px 25px #375b7310;
+  border-color: #c7c7cc;
+  box-shadow: 0 0 0 4px #6e6e7314;
 }
 .viewTrigger svg {
   width: 16px;
@@ -194,11 +252,11 @@ header {
   text-align: left;
 }
 .viewMenu button:hover {
-  background: #f0f7fc;
+  background: #f5f5f7;
 }
 .viewMenu button.selected {
   background: var(--accent-soft);
-  color: #1978bd;
+  color: var(--ink);
   font-weight: 650;
 }
 .viewMenu svg {
@@ -209,25 +267,20 @@ header {
   stroke-width: 2;
 }
 .note {
-  background: #fff;
-  border: 1px solid #e3e5e8;
-  border-radius: 24px;
-  box-shadow: 0 25px 70px #28516d0d, 0 2px 8px #28516d08;
-  padding: 46px 46px 38px;
+  background: #f5f5f7;
+  border: 0;
+  border-radius: 28px;
+  box-shadow: none;
+  padding: 52px 48px 44px;
   position: relative;
 }
 .note:before {
-  content: '';
-  height: 5px;
-  position: absolute;
-  top: 0;
-  left: 41px;
-  right: 41px;
-  background: linear-gradient(90deg, #65b8f3, #3199e7);
-  border-radius: 0 0 6px 6px;
+  content: none;
 }
 .noteTitle {
   padding-bottom: 27px;
+  position: relative;
+  z-index: 10;
 }
 .noteTitle > span {
   font-size: 9px;
@@ -235,25 +288,57 @@ header {
   letter-spacing: 0.17em;
   color: #9b9ea4;
 }
-.noteTitle h2 {
-  font-size: 34px;
-  font-weight: 680;
-  margin: 8px 0 6px;
-  letter-spacing: -0.6px;
-}
 .noteTitle p {
   font-size: 12px;
   color: var(--muted);
   margin: 0;
 }
+.titleViewPicker {
+  width: fit-content;
+  max-width: 100%;
+  margin: 8px 0 6px;
+}
+.titleViewTrigger {
+  width: auto;
+  max-width: 100%;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  text-align: left;
+}
+.titleViewTrigger:hover,
+.titleViewTrigger:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--ink);
+}
+.titleViewTrigger svg {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+}
+.titleViewPicker .viewMenu {
+  width: 320px;
+  max-width: calc(100vw - 56px);
+}
 .board {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
   border: 1px solid var(--line);
-  border-radius: 17px;
+  border-radius: 20px;
   min-height: 300px;
   overflow: visible;
-  box-shadow: inset 0 1px #ffffff;
+  background: #fff;
+  box-shadow: none;
 }
 .tableArea {
   padding: 18px;
@@ -291,19 +376,30 @@ td:first-child {
 td:first-child a {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: inherit;
+  gap: 6px;
+  max-width: 100%;
+  color: #1d1d1f;
   text-decoration: none;
 }
-td:first-child a:hover {
+.rowExternalIcon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+}
+.rowExternalIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--accent-deep);
+}
+.rowExternalIcon svg {
+  width: 12px;
+  height: 12px;
+}
+.rowLink:hover .rowLinkLabel,
+.rowLink:focus-visible .rowLinkLabel {
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-td:first-child svg {
-  width: 12px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 1.7;
 }
 .rowNameCell {
   cursor: text;
@@ -419,9 +515,9 @@ td > button {
 }
 .resources {
   border-left: 1px solid var(--line);
-  background: #f9fbfd;
+  background: #fafafa;
   padding: 21px;
-  border-radius: 0 17px 17px 0;
+  border-radius: 0 20px 20px 0;
 }
 .resourceHead {
   display: flex;
@@ -439,8 +535,8 @@ td > button {
   min-width: 20px;
   height: 20px;
   border-radius: 999px;
-  background: #e9f4fc;
-  color: #3385c1;
+  background: #eeeeef;
+  color: #6e6e73;
   font-size: 9px;
   font-weight: 700;
 }
@@ -463,12 +559,15 @@ td > button {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--accent-soft);
+  background: #fff;
+  border: 1px solid #e9e9eb;
   display: grid;
   place-items: center;
   color: #62789d;
 }
-.resourceList svg {
+.resourceItem > i > svg:not(.resourceTypeIcon),
+.resourceExternal svg,
+.resourceEmpty svg {
   width: 13px;
   height: 13px;
   fill: none;
@@ -490,12 +589,28 @@ td > button {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.resourceTitle > a {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #1d1d1f;
+  text-decoration: none;
+}
+.resourceTitle > a:hover,
+.resourceTitle > a:focus-visible {
+  color: var(--accent-deep);
+}
+.resourceTypeIcon {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
 .resourceMore {
   flex: 0 0 auto;
   border: 0;
   border-radius: 999px;
-  background: #e8f4fc;
-  color: #2781c2;
+  background: #eeeeef;
+  color: #6e6e73;
   padding: 3px 6px;
   font-size: 7px;
   font-weight: 750;
@@ -503,8 +618,8 @@ td > button {
 }
 .resourceMore:hover,
 .resourceMore[aria-expanded='true'] {
-  background: #d7edfb;
-  color: #116ba9;
+  background: #dfdfe2;
+  color: #424245;
 }
 .resourceExternal {
   display: grid;
@@ -583,8 +698,8 @@ td > button {
   place-items: center;
   margin: 0 auto 10px;
   border-radius: 11px;
-  background: #edf6fc;
-  color: #63a5d5;
+  background: #eeeeef;
+  color: #6e6e73;
 }
 .resourceEmpty p {
   margin: 0;
@@ -709,19 +824,17 @@ td > button {
 }
 @media (max-width: 720px) {
   .page {
-    padding: 25px 12px 45px;
+    padding: 0 12px 45px;
   }
   header {
-    margin: 0 6px 27px;
-  }
-  .wordmark p {
-    font-size: 11px;
+    min-height: 64px;
+    margin-left: calc(50% - 50vw);
+    margin-bottom: 40px;
+    padding: 0 18px;
+    column-gap: 18px;
   }
   .avatar:nth-child(n + 3) {
     display: none;
-  }
-  .viewPicker {
-    width: 100%;
   }
   .note {
     padding: 31px 16px 20px;
@@ -730,8 +843,13 @@ td > button {
     left: 16px;
     right: 16px;
   }
-  .noteTitle h2 {
+  .titleViewTrigger {
     font-size: 29px;
+    gap: 8px;
+  }
+  .titleViewTrigger svg {
+    width: 20px;
+    height: 20px;
   }
   .board {
     grid-template-columns: 1fr;
@@ -771,14 +889,26 @@ td > button {
 }
 @media (max-width: 520px) {
   header {
-    align-items: flex-start;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'wordmark actions';
+    align-items: center;
   }
   .wordmark h1 {
-    max-width: 245px;
-    font-size: 31px;
+    max-width: none;
+    font-size: 19px;
   }
-  .teamLabel {
-    display: none;
+  .headerActions {
+    gap: 12px;
+  }
+  .headerNav {
+    gap: 12px;
+  }
+  .headerNav a {
+    font-size: 10px;
+  }
+  .teamBlock {
+    align-items: center;
+    padding: 0;
   }
   .avatar,
   .circleButton {

@@ -13,7 +13,6 @@ export default function TeamMembers({ members, onAdd }) {
   };
   return (
     <div className="teamBlock">
-      <span className="teamLabel">Equipo</span>
       <div className="team">
         {members.map((member, index) => (
           <span
