@@ -1,4 +1,16 @@
 import { useState } from 'react';
+import AppleSelect from './AppleSelect';
+
+const itineraryStatusOptions = [
+  { value: '', label: '—' },
+  { value: 'done', label: 'Done' },
+  { value: 'on-course', label: 'On course' }
+];
+
+const itemTypeOptions = [
+  { value: 'row', label: 'Fila' },
+  { value: 'header', label: 'Encabezado' }
+];
 
 const Itinerary = () => {
   const [members, setMembers] = useState([
@@ -209,24 +221,22 @@ const Itinerary = () => {
 
                     {/* MEMBER STATUS */}
                     {members.map((member) => (
-                      <select
+                      <AppleSelect
                         key={member.id}
                         value={item.status[member.id] ?? ''}
-                        onChange={(e) =>
-                          changeStatus(item.id, member.id, e.target.value)
+                        onChange={(value) =>
+                          changeStatus(item.id, member.id, value)
                         }
-                        className="
-                        bg-neutral-200
-                        p-3
-                        rounded-full
-                          text-sm
-                          
-                        "
-                      >
-                        <option value="">-</option>
-                        <option value="done">Done</option>
-                        <option value="on-course">On-course</option>
-                      </select>
+                        ariaLabel={`Estado de ${item.name} para ${member.name}`}
+                        className={`statusSelect itineraryStatus ${
+                          item.status[member.id] === 'done'
+                            ? 'done'
+                            : item.status[member.id] === 'on-course'
+                            ? 'course'
+                            : ''
+                        }`}
+                        options={itineraryStatusOptions}
+                      />
                     ))}
 
                     <div />
@@ -315,19 +325,18 @@ const Itinerary = () => {
 
             <label className="mb-1 block text-sm">Type</label>
 
-            <select
+            <AppleSelect
               value={newItem.type}
-              onChange={(e) =>
+              onChange={(value) =>
                 setNewItem({
                   ...newItem,
-                  type: e.target.value
+                  type: value
                 })
               }
-              className="mb-4 w-full border border-gray-300 px-3 py-2"
-            >
-              <option value="row">Row</option>
-              <option value="header">Header</option>
-            </select>
+              ariaLabel="Tipo de información"
+              className="formAppleSelect"
+              options={itemTypeOptions}
+            />
 
             <label className="mb-1 block text-sm">Name</label>
 

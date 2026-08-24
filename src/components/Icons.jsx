@@ -5,6 +5,20 @@ export function PlusIcon() {
     </svg>
   );
 }
+export function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24">
+      <path d="m7 7 10 10M17 7 7 17" />
+    </svg>
+  );
+}
+export function MinusIcon() {
+  return (
+    <svg viewBox="0 0 24 24">
+      <path d="M6 12h12" />
+    </svg>
+  );
+}
 export function LinkIcon() {
   return (
     <svg viewBox="0 0 24 24">
@@ -52,7 +66,11 @@ export function ResourceIcon({ label, url }) {
 
   if (kind === 'drive') {
     return (
-      <svg className="resourceTypeIcon driveIcon" viewBox="0 0 24 24" aria-hidden="true">
+      <svg
+        className="resourceTypeIcon driveIcon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <path fill="#0F9D58" d="M8.1 3.5h5.3l5.2 9H13.3z" />
         <path fill="#F4B400" d="M8.1 3.5 2.8 12.6l2.7 4.6 5.2-9z" />
         <path fill="#4285F4" d="M5.5 17.2h10.6l2.5-4.7H8z" />
@@ -61,28 +79,52 @@ export function ResourceIcon({ label, url }) {
   }
   if (kind === 'sheets') {
     return (
-      <svg className="resourceTypeIcon sheetsIcon" viewBox="0 0 24 24" aria-hidden="true">
+      <svg
+        className="resourceTypeIcon sheetsIcon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <path fill="#0F9D58" d="M6 2.5h8l4 4V21.5H6z" />
         <path fill="#87CEAC" d="M14 2.5v4h4z" />
-        <path fill="none" stroke="#fff" strokeWidth="1.25" d="M8.5 10h7v7h-7zm0 2.4h7m-4.7-2.4v7" />
+        <path
+          fill="none"
+          stroke="#fff"
+          strokeWidth="1.25"
+          d="M8.5 10h7v7h-7zm0 2.4h7m-4.7-2.4v7"
+        />
       </svg>
     );
   }
   if (kind === 'docs') {
     return (
-      <svg className="resourceTypeIcon docsIcon" viewBox="0 0 24 24" aria-hidden="true">
+      <svg
+        className="resourceTypeIcon docsIcon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <path fill="#4285F4" d="M6 2.5h8l4 4V21.5H6z" />
         <path fill="#AECBFA" d="M14 2.5v4h4z" />
-        <path fill="none" stroke="#fff" strokeWidth="1.25" d="M8.8 10.3h6.4m-6.4 2.7h6.4m-6.4 2.7h5" />
+        <path
+          fill="none"
+          stroke="#fff"
+          strokeWidth="1.25"
+          d="M8.8 10.3h6.4m-6.4 2.7h6.4m-6.4 2.7h5"
+        />
       </svg>
     );
   }
   if (kind === 'pdf') {
     return (
-      <svg className="resourceTypeIcon pdfIcon" viewBox="0 0 24 24" aria-hidden="true">
+      <svg
+        className="resourceTypeIcon pdfIcon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <path fill="#E5484D" d="M6 2.5h8l4 4V21.5H6z" />
         <path fill="#FFB4B7" d="M14 2.5v4h4z" />
-        <text x="7.15" y="17.2" fill="#fff" fontSize="5.1" fontWeight="800">PDF</text>
+        <text x="7.15" y="17.2" fill="#fff" fontSize="5.1" fontWeight="800">
+          PDF
+        </text>
       </svg>
     );
   }

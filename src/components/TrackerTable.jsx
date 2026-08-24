@@ -1,13 +1,31 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AddForm from './AddForm';
+import AppleSelect from './AppleSelect';
 import Popover from './Popover';
 import ResourcePanel from './ResourcePanel';
 import { ExternalIcon, PlusIcon } from './Icons';
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    () => window.matchMedia(query).matches
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const updateMatch = (event) => setMatches(event.matches);
+    media.addEventListener('change', updateMatch);
+    return () => media.removeEventListener('change', updateMatch);
+  }, [query]);
+
+  return matches;
+}
 
 export default function TrackerTable({
   table,
   onAddRow,
   onAddColumn,
+  onAddResource,
+  onDeleteResource,
   onRenameRow,
   onCellChange
 }) {
@@ -15,6 +33,32 @@ export default function TrackerTable({
   const [columnOpen, setColumnOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [rowName, setRowName] = useState('');
+  const [mobileColumnIndex, setMobileColumnIndex] = useState(0);
+  const [desktopExtraIndex, setDesktopExtraIndex] = useState(2);
+  const isMobile = useMediaQuery('(max-width: 720px)');
+
+  const allColumnIndexes = table.columns.map((_, index) => index);
+  const extraColumnIndexes = allColumnIndexes.slice(2);
+  const activeMobileIndex = allColumnIndexes.includes(mobileColumnIndex)
+    ? mobileColumnIndex
+    : 0;
+  const activeExtraIndex = extraColumnIndexes.includes(desktopExtraIndex)
+    ? desktopExtraIndex
+    : extraColumnIndexes[0];
+  const visibleColumnIndexes = isMobile
+    ? allColumnIndexes.length
+      ? [activeMobileIndex]
+      : []
+    : [
+        ...allColumnIndexes.slice(0, 2),
+        ...(activeExtraIndex === undefined ? [] : [activeExtraIndex])
+      ];
+  const statusOptions = [
+    { value: '', label: '—' },
+    { value: 'on-course', label: 'On course' },
+    { value: 'done', label: 'Done' },
+    { value: 'fail', label: 'Fail' }
+  ];
 
   const startRename = (row) => {
     setEditingRow(row.id);
@@ -34,10 +78,37 @@ export default function TrackerTable({
             <thead>
               <tr>
                 <th>Nombre</th>
-                {table.columns.map((column) => (
-                  <th key={column}>{column}</th>
-                ))}
-                <th className="tableSpacer" />
+                {visibleColumnIndexes.map((columnIndex, visibleIndex) => {
+                  const column = table.columns[columnIndex];
+                  const selectable =
+                    isMobile ||
+                    (table.columns.length > 3 && visibleIndex === 2);
+                  const options = isMobile
+                    ? allColumnIndexes
+                    : extraColumnIndexes;
+
+                  return (
+                    <th key={`column-${columnIndex}`}>
+                      {selectable ? (
+                        <AppleSelect
+                          className="columnNavigator"
+                          ariaLabel="Columna visible"
+                          value={columnIndex}
+                          options={options.map((optionIndex) => ({
+                            value: optionIndex,
+                            label: table.columns[optionIndex]
+                          }))}
+                          onChange={(event) => {
+                            if (isMobile) setMobileColumnIndex(event);
+                            else setDesktopExtraIndex(event);
+                          }}
+                        />
+                      ) : (
+                        column
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -80,44 +151,40 @@ export default function TrackerTable({
                       r.name
                     )}
                   </td>
-                  {table.columns.map((column, ci) => (
-                    <td key={ci}>
-                      {column.toLowerCase() === 'date' ? (
-                        <input
-                          className="dateField"
-                          aria-label={`Fecha de ${r.name}`}
-                          value={r.values[ci]}
-                          placeholder="dd/mm/aa"
-                          onChange={(event) =>
-                            onCellChange(ri, ci, event.target.value)
-                          }
-                        />
-                      ) : (
-                        <select
-                          aria-label={`Estado de ${r.name} para ${column}`}
-                          className={`statusSelect ${
-                            r.values[ci] === 'done'
-                              ? 'done'
-                              : r.values[ci] === 'on-course'
-                              ? 'course'
-                              : r.values[ci] === 'fail'
-                              ? 'fail'
-                              : ''
-                          }`}
-                          value={r.values[ci]}
-                          onChange={(event) =>
-                            onCellChange(ri, ci, event.target.value)
-                          }
-                        >
-                          <option value="">—</option>
-                          <option value="on-course">On course</option>
-                          <option value="done">Done</option>
-                          <option value="fail">Fail</option>
-                        </select>
-                      )}
-                    </td>
-                  ))}
-                  <td />
+                  {visibleColumnIndexes.map((ci) => {
+                    const column = table.columns[ci];
+                    return (
+                      <td key={ci}>
+                        {column.toLowerCase() === 'date' ? (
+                          <input
+                            className="dateField"
+                            aria-label={`Fecha de ${r.name}`}
+                            value={r.values[ci]}
+                            placeholder="dd/mm/aa"
+                            onChange={(event) =>
+                              onCellChange(ri, ci, event.target.value)
+                            }
+                          />
+                        ) : (
+                          <AppleSelect
+                            ariaLabel={`Estado de ${r.name} para ${column}`}
+                            className={`statusSelect ${
+                              r.values[ci] === 'done'
+                                ? 'done'
+                                : r.values[ci] === 'on-course'
+                                ? 'course'
+                                : r.values[ci] === 'fail'
+                                ? 'fail'
+                                : ''
+                            }`}
+                            value={r.values[ci]}
+                            options={statusOptions}
+                            onChange={(event) => onCellChange(ri, ci, event)}
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -171,7 +238,11 @@ export default function TrackerTable({
           </div>
         </div>
       </div>
-      <ResourcePanel rows={table.rows} />
+      <ResourcePanel
+        resources={table.resources}
+        onAddResource={onAddResource}
+        onDeleteResource={onDeleteResource}
+      />
     </div>
   );
 }

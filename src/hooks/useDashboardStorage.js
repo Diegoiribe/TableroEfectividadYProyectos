@@ -12,6 +12,7 @@ const STORAGE_KEY = 'tablero-interno-data';
 const MIGRATION_KEY = 'tablero-interno-cloud-migrated-tablerointerno2';
 const dashboardRef = doc(db, 'dashboards', 'principal');
 const DEMO_ROW_IDS = new Set([1, 2, 3, 4, 5, 6, 1787351063387]);
+const TRASH_LIFETIME = 5 * 24 * 60 * 60 * 1000;
 
 function removeDemoRows(data) {
   if (!data?.tables) return data;
@@ -19,6 +20,11 @@ function removeDemoRows(data) {
     ...data,
     members: (data.members ?? []).map((member) =>
       member === 'Alfredo' ? 'JR' : member
+    ),
+    tools: data.tools ?? [],
+    docs: data.docs ?? [],
+    docsTrash: (data.docsTrash ?? []).filter(
+      (document) => Date.now() - (document.deletedAt ?? 0) < TRASH_LIFETIME
     ),
     tables: Object.fromEntries(
       Object.entries(data.tables).map(([view, table]) => [
@@ -76,6 +82,12 @@ function normalizeRows(table, columns) {
   }));
 }
 
+function normalizeResources(table) {
+  return (table?.resources ?? []).filter(
+    (resource) => resource?.url && (resource.label || resource.name)
+  );
+}
+
 function mergeDashboards(remote, local) {
   const remoteData = removeDemoRows(remote);
   const localData = removeDemoRows(local);
@@ -91,6 +103,32 @@ function mergeDashboards(remote, local) {
         ...(localData?.members ?? [])
       ])
     ],
+    tools: [
+      ...new Map(
+        [...(remoteData?.tools ?? []), ...(localData?.tools ?? [])].map(
+          (resource) => [
+            resource.id ?? `${resource.url}:${resource.label ?? resource.name}`,
+            resource
+          ]
+        )
+      ).values()
+    ],
+    docs: [
+      ...new Map(
+        [...(remoteData?.docs ?? []), ...(localData?.docs ?? [])].map(
+          (document) => [document.id, document]
+        )
+      ).values()
+    ],
+    docsTrash: [
+      ...new Map(
+        [...(remoteData?.docsTrash ?? []), ...(localData?.docsTrash ?? [])].map(
+          (document) => [document.id, document]
+        )
+      ).values()
+    ].filter(
+      (document) => Date.now() - (document.deletedAt ?? 0) < TRASH_LIFETIME
+    ),
     tables: Object.fromEntries(
       [...viewIds].map((view) => {
         const remoteTable = remoteData?.tables?.[view];
@@ -107,6 +145,18 @@ function mergeDashboards(remote, local) {
         normalizeRows(localTable, columns).forEach((row) =>
           rows.set(row.id, row)
         );
+        const resources = new Map(
+          normalizeResources(remoteTable).map((resource) => [
+            resource.id ?? `${resource.url}:${resource.label ?? resource.name}`,
+            resource
+          ])
+        );
+        normalizeResources(localTable).forEach((resource) =>
+          resources.set(
+            resource.id ?? `${resource.url}:${resource.label ?? resource.name}`,
+            resource
+          )
+        );
 
         return [
           view,
@@ -115,7 +165,7 @@ function mergeDashboards(remote, local) {
             ...(localTable ?? {}),
             columns,
             rows: [...rows.values()],
-            resources: []
+            resources: [...resources.values()]
           }
         ];
       })
@@ -151,9 +201,12 @@ export function useDashboardStorage(initialData) {
           const remoteData = remoteSnapshot.exists()
             ? {
                 members: remoteSnapshot.data().members,
-                tables: remoteSnapshot.data().tables
+                tables: remoteSnapshot.data().tables,
+                tools: remoteSnapshot.data().tools ?? [],
+                docs: remoteSnapshot.data().docs ?? [],
+                docsTrash: remoteSnapshot.data().docsTrash ?? []
               }
-            : { members: [], tables: {} };
+            : { members: [], tables: {}, tools: [], docs: [], docsTrash: [] };
           const merged = mergeDashboards(remoteData, dataRef.current);
 
           await setDoc(dashboardRef, {
@@ -177,7 +230,10 @@ export function useDashboardStorage(initialData) {
               if (remote.members && remote.tables) {
                 const next = removeDemoRows({
                   members: remote.members,
-                  tables: remote.tables
+                  tables: remote.tables,
+                  tools: remote.tools ?? [],
+                  docs: remote.docs ?? [],
+                  docsTrash: remote.docsTrash ?? []
                 });
                 const nextValue = JSON.stringify(next);
                 const currentValue = JSON.stringify(dataRef.current);

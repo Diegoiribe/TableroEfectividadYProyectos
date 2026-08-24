@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { CloseIcon } from './Icons';
 
 export default function Popover({
   open,
@@ -22,9 +23,25 @@ export default function Popover({
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className={`popover ${align} ${placement}`} ref={ref}>
+    <div
+      className={`popover ${align} ${placement}`}
+      ref={ref}
+      role="dialog"
+      aria-modal="false"
+      aria-label={title}
+    >
       <div className="popoverArrow" />
-      <h4>{title}</h4>
+      <div className="popoverHeader">
+        <h4>{title}</h4>
+        <button
+          type="button"
+          className="popoverClose"
+          aria-label="Cerrar"
+          onClick={onClose}
+        >
+          <CloseIcon />
+        </button>
+      </div>
       {children}
     </div>
   );

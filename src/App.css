@@ -44,17 +44,27 @@ header {
   align-items: center;
   gap: 28px;
 }
-.headerNav a {
+.headerNav a,
+.headerNav button {
   position: relative;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: #424245;
+  font-family: inherit;
   font-size: 12px;
   text-decoration: none;
+  cursor: pointer;
 }
 .headerNav a:hover,
-.headerNav a:focus-visible {
+.headerNav a:focus-visible,
+.headerNav button:hover,
+.headerNav button:focus-visible,
+.headerNav button.active {
   color: #1d1d1f;
 }
-.headerNav a:after {
+.headerNav a:after,
+.headerNav button:after {
   content: '';
   position: absolute;
   right: 0;
@@ -66,7 +76,10 @@ header {
   transition: opacity 0.18s ease;
 }
 .headerNav a:hover:after,
-.headerNav a:focus-visible:after {
+.headerNav a:focus-visible:after,
+.headerNav button:hover:after,
+.headerNav button:focus-visible:after,
+.headerNav button.active:after {
   opacity: 1;
 }
 .wordmark > span,
@@ -230,12 +243,12 @@ header {
   width: 100%;
   top: calc(100% + 7px);
   left: 0;
-  padding: 6px;
-  border: 1px solid #dce6ed;
-  border-radius: 15px;
-  background: #fffffff2;
-  box-shadow: 0 20px 50px #223b4d24, 0 2px 8px #223b4d0d;
-  backdrop-filter: blur(24px);
+  padding: 8px;
+  border: 1px solid #d2d2d7;
+  border-radius: 20px;
+  background: #fffffff0;
+  box-shadow: 0 24px 70px #00000024, 0 3px 12px #0000000d;
+  backdrop-filter: saturate(180%) blur(28px);
   animation: pop 0.15s ease-out;
 }
 .viewMenu button {
@@ -244,8 +257,8 @@ header {
   align-items: center;
   justify-content: space-between;
   border: 0;
-  border-radius: 10px;
-  padding: 10px 11px;
+  border-radius: 12px;
+  padding: 12px 14px;
   background: transparent;
   color: #415160;
   font-size: 12px;
@@ -366,6 +379,113 @@ th {
   color: #96999f;
   font-weight: 700;
 }
+.appleSelect {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.appleSelect.open {
+  z-index: 45;
+}
+.appleSelectTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.appleSelectTrigger > svg {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  transition: transform 0.18s ease;
+}
+.appleSelectTrigger[aria-expanded='true'] > svg {
+  transform: rotate(180deg);
+}
+.appleSelectMenu {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  z-index: 80;
+  min-width: max(100%, 132px);
+  padding: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  animation: appleSelectIn 0.16s ease-out;
+}
+.appleSelectMenu button {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: transparent;
+  color: #424245;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.appleSelectMenu button:hover,
+.appleSelectMenu button:focus-visible {
+  background: #f2f2f4;
+  outline: none;
+}
+.appleSelectMenu button.selected {
+  color: #1d1d1f;
+  font-weight: 650;
+}
+.appleSelectMenu button svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+@keyframes appleSelectIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.columnNavigator {
+  max-width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 7px;
+  background-color: #f2f2f4;
+  color: #6e6e73;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  outline: none;
+}
+.columnNavigator:hover,
+.columnNavigator:focus-visible {
+  background-color: #e8e8eb;
+}
 th:first-child {
   width: 42%;
 }
@@ -427,14 +547,10 @@ td > button {
 }
 .statusSelect {
   width: 100px;
-  appearance: none;
   border: 1px solid transparent;
   border-radius: 999px;
-  padding: 7px 25px 7px 11px;
+  padding: 7px 10px 7px 11px;
   background-color: #f4f6f8;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='m2 4 3 3 3-3' fill='none' stroke='%23828c96' stroke-width='1.4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 9px center;
   color: #8b949d;
   font-size: 9px;
   font-weight: 600;
@@ -445,6 +561,33 @@ td > button {
 .statusSelect:focus-visible {
   border-color: #b8d9ef;
   box-shadow: 0 0 0 3px #55a9ed16;
+}
+.itineraryStatus {
+  width: 100%;
+  min-width: 108px;
+}
+.formAppleSelect {
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: 16px;
+  border: 1px solid #d2d2d7;
+  border-radius: 12px;
+  padding: 9px 12px;
+  background: #f5f5f7;
+  color: #1d1d1f;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+}
+.appleSelect:has(.formAppleSelect) {
+  display: block;
+  width: 100%;
+}
+.formAppleSelect:hover,
+.formAppleSelect:focus-visible {
+  border-color: #a8a8ad;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(110, 110, 115, 0.1);
 }
 .done {
   background-color: #e8f5ee !important;
@@ -514,8 +657,10 @@ td > button {
   color: #2688cf;
 }
 .resources {
+  display: flex;
+  flex-direction: column;
   border-left: 1px solid var(--line);
-  background: #fafafa;
+  background: #fbfbfd;
   padding: 21px;
   border-radius: 0 20px 20px 0;
 }
@@ -540,30 +685,31 @@ td > button {
   font-size: 9px;
   font-weight: 700;
 }
+.resourceList {
+  flex: 1;
+}
 .resourceItem {
   position: relative;
   display: grid;
-  grid-template-columns: 29px 1fr 12px;
+  grid-template-columns: 20px minmax(0, 1fr) 24px;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: #61646a;
   text-decoration: none;
   border-bottom: 1px solid var(--line);
-  padding: 10px 1px;
+  padding: 12px 0;
   font-size: 9px;
+  transition: padding 0.18s ease;
 }
 .resourceItem:hover {
   color: #222;
 }
 .resourceItem > i {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #fff;
-  border: 1px solid #e9e9eb;
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
-  color: #62789d;
+  color: #6e6e73;
 }
 .resourceItem > i > svg:not(.resourceTypeIcon),
 .resourceExternal svg,
@@ -601,8 +747,8 @@ td > button {
   color: var(--accent-deep);
 }
 .resourceTypeIcon {
-  width: 17px;
-  height: 17px;
+  width: 19px;
+  height: 19px;
   display: block;
 }
 .resourceMore {
@@ -622,11 +768,16 @@ td > button {
   color: #424245;
 }
 .resourceExternal {
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
+  border-radius: 50%;
   color: #7d8790;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 .resourceExternal:hover {
+  background: #ededf0;
   color: var(--accent-deep);
 }
 .resourceList small {
@@ -645,12 +796,12 @@ td > button {
   max-height: 210px;
   overflow: auto;
   padding: 11px;
-  border: 1px solid #dce7ee;
-  border-radius: 12px;
-  background: #fffffff5;
+  border: 1px solid #d2d2d7;
+  border-radius: 16px;
+  background: #fffffff0;
   color: #53616e;
   box-shadow: 0 16px 38px #263e5024;
-  backdrop-filter: blur(20px);
+  backdrop-filter: saturate(180%) blur(24px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -688,33 +839,48 @@ td > button {
   line-height: 1.6;
 }
 .resourceEmpty {
-  padding: 30px 10px 10px;
+  padding: 34px 10px 24px;
   text-align: center;
 }
 .resourceEmpty > i {
-  width: 36px;
-  height: 36px;
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
   margin: 0 auto 10px;
-  border-radius: 11px;
-  background: #eeeeef;
   color: #6e6e73;
 }
 .resourceEmpty p {
   margin: 0;
 }
+.resourceActions {
+  margin-top: 14px;
+  padding-top: 4px;
+}
+.resourceAddAnchor {
+  display: block;
+}
+.resourceAddRow {
+  color: #6e6e73;
+  margin: 0;
+}
+.resourceAddRow:hover,
+.resourceAddRow:focus-visible,
+.resourceAddRow[aria-expanded='true'] {
+  background: #ededf0;
+  color: #1d1d1f;
+}
 .popover {
   position: absolute;
   left: 0;
   top: calc(100% + 11px);
-  width: 255px;
-  background: #fffffff5;
-  border: 1px solid #dfe1e5;
-  border-radius: 13px;
-  padding: 15px;
-  box-shadow: 0 14px 40px #20242b22, 0 2px 8px #20242b0d;
-  backdrop-filter: blur(22px);
+  width: 286px;
+  background: #fffffff0;
+  border: 1px solid #d2d2d7;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 28px 80px #0000002b, 0 4px 14px #0000000d;
+  backdrop-filter: saturate(180%) blur(28px);
   z-index: 20;
   animation: pop 0.15s ease-out;
   transform-origin: top left;
@@ -725,15 +891,7 @@ td > button {
   transform-origin: top right;
 }
 .popoverArrow {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  border-left: 1px solid #dfe1e5;
-  border-top: 1px solid #dfe1e5;
-  transform: rotate(45deg);
-  top: -6px;
-  left: 16px;
+  display: none;
 }
 .popover.right .popoverArrow {
   left: auto;
@@ -755,16 +913,51 @@ td > button {
 .popover.top.right {
   transform-origin: bottom right;
 }
+.popoverHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 17px;
+}
 .popover h4 {
-  font-size: 11px;
-  margin: 0 0 13px;
+  color: #1d1d1f;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.popoverClose {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ededf0;
+  color: #6e6e73;
+}
+.popoverClose:hover,
+.popoverClose:focus-visible {
+  background: #dedee2;
+  color: #1d1d1f;
+}
+.popoverClose svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
 }
 .addForm label {
   display: block;
-  color: #65686e;
-  font-size: 8px;
-  font-weight: 650;
-  margin-top: 10px;
+  color: #6e6e73;
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 14px;
 }
 .addForm label:first-child {
   margin-top: 0;
@@ -777,40 +970,1109 @@ td > button {
 .addForm input {
   display: block;
   width: 100%;
-  border: 1px solid #dde0e4;
-  border-radius: 8px;
-  background: #f8f8f9;
-  padding: 9px 10px;
-  margin-top: 5px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #f5f5f7;
+  padding: 11px 12px;
+  margin-top: 7px;
   outline: none;
-  font-size: 10px;
-  color: #333;
+  font-size: 12px;
+  color: #1d1d1f;
 }
 .addForm input:focus {
   background: #fff;
-  border-color: #aeb9cb;
-  box-shadow: 0 0 0 3px #7386a817;
+  border-color: #a8a8ad;
+  box-shadow: 0 0 0 3px #6e6e7314;
 }
 .formActions {
   display: flex;
   justify-content: flex-end;
-  gap: 7px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 20px;
 }
 .formActions button {
+  min-width: 72px;
+  height: 30px;
   border: 0;
   background: transparent;
-  border-radius: 7px;
-  padding: 7px 9px;
-  color: #777;
-  font-size: 9px;
+  border-radius: 999px;
+  padding: 0 12px;
+  color: #6e6e73;
+  font-size: 11px;
+  font-weight: 600;
 }
 .formActions .confirm {
-  background: var(--accent-deep);
+  background: #1d1d1f;
+  color: #fff;
+}
+.formActions button:hover,
+.formActions button:focus-visible {
+  background: #ededf0;
+  color: #1d1d1f;
+}
+.formActions .confirm:hover,
+.formActions .confirm:focus-visible {
+  background: #424245;
   color: #fff;
 }
 .resources .popover {
-  top: calc(100% + 9px);
+  z-index: 60;
+}
+.toolsWorkspace {
+  min-height: calc(100vh - 168px);
+}
+.toolsIntro {
+  margin: 0 0 28px 4px;
+}
+.toolsIntro > span {
+  display: block;
+  margin-bottom: 12px;
+  color: #96999f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+.toolsIntro h2 {
+  margin: 0;
+  color: #1d1d1f;
+  font-size: clamp(38px, 5vw, 62px);
+  font-weight: 650;
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+}
+.toolsIntro p {
+  margin: 14px 0 0;
+  color: #6e6e73;
+  font-size: 14px;
+}
+.toolsShell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 620px;
+  overflow: visible;
+  border: 1px solid #d2d2d7;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.08);
+}
+.toolsLibrary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px 14px;
+  border-right: 1px solid #dedee1;
+  background: rgba(246, 246, 248, 0.92);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-radius: 23px 0 0 23px;
+  z-index: 12;
+}
+.toolsLibraryHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px 14px;
+}
+.toolsLibraryHead > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.toolsLibraryHead span {
+  color: #1d1d1f;
+  font-size: 13px;
+  font-weight: 650;
+}
+.toolsLibraryHead strong {
+  color: #98989d;
+  font-size: 9px;
+  font-weight: 500;
+}
+.toolsMobileClose {
+  display: none;
+}
+.toolsList {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.toolCardWrap {
+  position: relative;
+  border-radius: 12px;
+  -webkit-touch-callout: none;
+}
+.toolCard {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 11px;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px;
+  background: transparent;
+  color: #1d1d1f;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+.toolCard:hover,
+.toolCard:focus-visible {
+  background: rgba(0, 0, 0, 0.045);
+  outline: none;
+}
+.toolCard:active {
+  transform: scale(0.985);
+}
+.toolCard.active {
+  background: #e3e3e7;
+}
+.toolCard > i,
+.toolsViewerIdentity > i {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+.toolCard .resourceTypeIcon,
+.toolsViewerIdentity .resourceTypeIcon {
+  width: 25px;
+  height: 25px;
+}
+.toolCard > i > svg:not(.resourceTypeIcon),
+.toolsViewerIdentity > i > svg:not(.resourceTypeIcon) {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+}
+.toolCard > span,
+.toolsViewerIdentity > span {
+  min-width: 0;
+}
+.toolCard strong,
+.toolCard small,
+.toolsViewerIdentity strong,
+.toolsViewerIdentity small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toolCard strong {
+  font-size: 11px;
+  font-weight: 600;
+}
+.toolCard small {
+  margin-top: 3px;
+  color: #929297;
+  font-size: 8px;
+}
+.toolCardArrow {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: #a1a1a6;
+  stroke-width: 1.8;
+}
+.toolsActions {
+  padding: 12px 4px 0;
+  border-top: 1px solid #dedee1;
+}
+.toolsAddAnchor {
+  display: block;
+}
+.toolsAddButton {
+  color: #5e5e63;
+}
+.toolsAddButton:hover,
+.toolsAddButton:focus-visible,
+.toolsAddButton[aria-expanded='true'] {
+  background: #e5e5e8;
+  color: #1d1d1f;
+}
+.toolsEmpty {
+  padding: 64px 18px;
+  color: #8e8e93;
+  text-align: center;
+}
+.toolsEmpty i {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 13px;
+  border-radius: 12px;
+  background: #e9e9ec;
+}
+.toolsEmpty svg {
+  width: 17px;
+  fill: none;
+  stroke: currentColor;
+}
+.toolsEmpty strong {
+  display: block;
+  color: #55555a;
+  font-size: 11px;
+}
+.toolsEmpty p {
+  margin: 6px 0 0;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.toolsViewer {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f7;
+  overflow: hidden;
+  border-radius: 0 23px 23px 0;
+}
+.toolsViewerBar {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #d2d2d7;
+  background: rgba(242, 242, 244, 0.94);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+.toolsViewerClose,
+.toolsMobileClose {
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #ededf0;
+  color: #6e6e73;
+  cursor: pointer;
+}
+.toolsViewerClose {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  border: 0;
+  background: transparent;
+  color: #7d1713;
+}
+.toolsViewerClose:before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  border: 1px solid #e0443e;
+  border-radius: 50%;
+  background: #ff5f57;
+}
+.toolsViewerClose:hover,
+.toolsMobileClose:hover {
+  background: rgba(0, 0, 0, 0.055);
+  color: #68110e;
+}
+.toolsViewerClose svg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 8px;
+  height: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.toolsViewerClose:hover svg,
+.toolsViewerClose:focus-visible svg {
+  opacity: 1;
+}
+.toolsMobileClose svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.toolsAddressBar {
+  width: min(640px, 100%);
+  min-width: 0;
+  height: 36px;
+  justify-self: center;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 11px;
+  padding: 0 6px 0 11px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #6e6e73;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.toolsAddressBar > span {
+  overflow: hidden;
+  color: #424245;
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toolsAddressBar > button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  padding: 0;
+  background: transparent;
+  color: #77777c;
+  cursor: pointer;
+}
+.toolsAddressBar > button:hover,
+.toolsAddressBar > button:focus-visible {
+  background: #ededf0;
+  color: #1d1d1f;
+  outline: none;
+}
+.toolsAddressBar > button svg,
+.toolsLockIcon {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.toolsViewerIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.toolsViewerIdentity strong {
+  font-size: 11px;
+}
+.toolsViewerIdentity small {
+  margin-top: 2px;
+  color: #8e8e93;
+  font-size: 8px;
+}
+.toolsOpenExternal {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: transparent;
+  color: #57575c;
+  text-decoration: none;
+}
+.toolsOpenExternal:hover {
+  background: #e2e2e5;
+  color: #1d1d1f;
+}
+.toolsOpenExternal svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.toolsFrame {
+  width: 100%;
+  flex: 1;
+  min-height: 520px;
+  border: 0;
+  background: #fff;
+}
+.toolsFrameHint {
+  margin: 0;
+  padding: 7px 14px;
+  border-top: 1px solid #e5e5e7;
+  background: #fafafa;
+  color: #98989d;
+  font-size: 8px;
+  text-align: center;
+}
+.toolsViewerEmpty {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #8e8e93;
+  text-align: center;
+}
+.toolsWindowDots {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  display: flex;
+  gap: 6px;
+}
+.toolsWindowDots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d2d2d7;
+}
+.toolsViewerEmpty > span {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border-radius: 20px;
+  background: #e8e8eb;
+}
+.toolsViewerEmpty svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: #7d7d82;
+  stroke-width: 1.5;
+}
+.toolsViewerEmpty h3 {
+  margin: 0;
+  color: #424245;
+  font-size: 16px;
+  font-weight: 600;
+}
+.toolsViewerEmpty p {
+  margin: 7px 0 0;
+  font-size: 11px;
+}
+.docsViewer {
+  background: #ececef;
+}
+.docsViewerBar {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 9px 16px;
+  border-bottom: 1px solid #d2d2d7;
+  background: rgba(247, 247, 249, 0.94);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+.docsViewerIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.docsViewerIdentity > i {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+.docsViewerIdentity .resourceTypeIcon {
+  width: 25px;
+  height: 25px;
+}
+.docsViewerIdentity > span {
+  min-width: 0;
+}
+.docsViewerIdentity strong,
+.docsViewerIdentity small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.docsViewerIdentity strong {
+  color: #1d1d1f;
+  font-size: 11px;
+  font-weight: 600;
+}
+.docsViewerIdentity small {
+  margin-top: 2px;
+  color: #8e8e93;
+  font-size: 8px;
+}
+.docsSaveButton {
+  min-width: 62px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #1d1d1f;
+  color: #fff;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.docsSaveButton:hover:not(:disabled),
+.docsSaveButton:focus-visible:not(:disabled) {
+  background: #424245;
+}
+.docsSaveButton:disabled {
+  background: #dedee2;
+  color: #929297;
+  cursor: default;
+}
+.docsCanvas {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 34px;
+}
+.docsPage {
+  width: min(720px, 100%);
+  min-height: 760px;
+  margin: 0 auto;
+  padding: 58px 64px;
+  border: 1px solid #dedee2;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.07);
+}
+.docsPage > span {
+  display: block;
+  margin-bottom: 13px;
+  color: #98989d;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+.docsPage h1 {
+  margin: 0;
+  color: #1d1d1f;
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+.docsTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 30px;
+}
+.editorToolbar {
+  position: relative;
+  z-index: 8;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid #dedee2;
+  border-radius: 14px;
+  background: rgba(247, 247, 249, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
+  backdrop-filter: blur(18px);
+}
+.editorToolbar > button {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  padding: 0;
+  background: transparent;
+  color: #55555a;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.editorToolbar > button:hover,
+.editorToolbar > button:focus-visible {
+  background: #e5e5e8;
+  color: #1d1d1f;
+  outline: none;
+}
+.editorToolbar > button svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.editorToolbar .appleSelect {
+  width: 78px;
+}
+.editorSizeSelect {
+  width: 100%;
+  height: 27px;
+  border: 0;
+  border-radius: 9px;
+  padding: 0 7px;
+  background: transparent;
+  color: #55555a;
+  font-size: 8px;
+  font-weight: 550;
+}
+.editorSizeSelect:hover,
+.editorSizeSelect:focus-visible,
+.editorSizeSelect[aria-expanded='true'] {
+  background: #e5e5e8;
+  outline: none;
+}
+.editorToolbar .appleSelectMenu {
+  right: 0;
+  left: auto;
+}
+.editorImageInput {
+  display: none;
+}
+.docsEditor {
+  width: 100%;
+  min-height: 590px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #333336;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.75;
+  outline: none;
+  white-space: pre-wrap;
+}
+.docsEditor:empty:before {
+  content: attr(data-placeholder);
+  color: #b0b0b5;
+  pointer-events: none;
+}
+.docsEditor img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 18px 0;
+  border-radius: 10px;
+}
+.docsEditor table {
+  width: 100%;
+  margin: 18px 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid #d2d2d7;
+  border-radius: 10px;
+}
+.docsEditor th,
+.docsEditor td {
+  border-right: 1px solid #e5e5e7;
+  border-bottom: 1px solid #e5e5e7;
+  padding: 8px 10px;
+  color: #333336;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.docsEditor th {
+  background: #f5f5f7;
+  font-weight: 650;
+}
+.docsTree {
+  gap: 6px;
+}
+.docTreeNode {
+  min-width: 0;
+}
+.docTreeNode + .docTreeNode {
+  margin-top: 4px;
+}
+.docTreeRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.docBranchToggle {
+  width: 18px;
+  height: 28px;
+  flex: 0 0 18px;
+}
+.docBranchToggle {
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  padding: 0;
+  background: transparent;
+  color: #8e8e93;
+  cursor: pointer;
+}
+.docBranchToggle:hover,
+.docBranchToggle:focus-visible {
+  background: #e5e5e8;
+  color: #424245;
+  outline: none;
+}
+.docBranchToggle svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  transform: rotate(-90deg);
+  transition: transform 0.16s ease;
+}
+.docBranchToggle.open svg {
+  transform: none;
+}
+.docTreeCard {
+  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr);
+  padding: 8px;
+}
+.docTreeCard > i {
+  width: 24px;
+  height: 24px;
+}
+.docTreeCard .resourceTypeIcon {
+  width: 21px;
+  height: 21px;
+}
+.docTreeChildren {
+  position: relative;
+  margin-left: 9px;
+  padding-left: 8px;
+  border-left: 1px solid #cfd0d4;
+  padding-top: 6px;
+}
+.docTreeChildren > .docTreeNode > .docTreeRow:before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  width: 8px;
+  border-top: 1px solid #cfd0d4;
+}
+.docTreeChildren .docTreeCard {
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+.docTreeChildren .docTreeCard > i {
+  width: 21px;
+  height: 21px;
+}
+.docTreeChildren .docTreeCard .resourceTypeIcon {
+  width: 18px;
+  height: 18px;
+}
+.docTreeChildren .docTreeCard strong {
+  font-size: 9px;
+  font-weight: 600;
+}
+.docTreeChildren .docTreeCard small {
+  font-size: 7px;
+}
+.subnotePopover {
+  position: fixed;
+  z-index: 200;
+  width: 250px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(250, 250, 252, 0.95);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.18);
+  backdrop-filter: saturate(180%) blur(22px);
+  animation: contextMenuIn 0.16s ease-out;
+}
+.subnotePopover > span {
+  display: block;
+  overflow: hidden;
+  margin-bottom: 7px;
+  color: #98989d;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.subnotePopover h3 {
+  margin: 0 0 18px;
+  color: #1d1d1f;
+  font-size: 16px;
+  font-weight: 650;
+}
+.docsLibraryHead {
+  gap: 10px;
+}
+.docsTrashButton {
+  position: relative;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #77777c;
+  cursor: pointer;
+}
+.docsTrashButton:hover,
+.docsTrashButton:focus-visible,
+.docsTrashButton.active {
+  background: #e3e3e7;
+  color: #1d1d1f;
+  outline: none;
+}
+.docsTrashButton svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.docsTrashButton i {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 13px;
+  height: 13px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #f6f6f8;
+  border-radius: 999px;
+  background: #6e6e73;
+  color: #fff;
+  font-size: 6px;
+  font-style: normal;
+  font-weight: 700;
+}
+.trashDocCard {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 9px;
+  border-radius: 11px;
+  padding: 9px;
+  background: #ededf0;
+}
+.trashDocCard > i {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+}
+.trashDocCard .resourceTypeIcon {
+  width: 21px;
+  height: 21px;
+}
+.trashDocCard > span {
+  min-width: 0;
+}
+.trashDocCard strong,
+.trashDocCard small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trashDocCard strong {
+  color: #424245;
+  font-size: 9px;
+}
+.trashDocCard small {
+  margin-top: 3px;
+  color: #8e8e93;
+  font-size: 7px;
+}
+.trashDocCard > button {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  background: #fff;
+  color: #6e6e73;
+  cursor: pointer;
+}
+.trashDocCard > button:hover,
+.trashDocCard > button:focus-visible {
+  background: #dedee2;
+  color: #1d1d1f;
+  outline: none;
+}
+.trashDocCard > button svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.docsEmptyIcon {
+  background: transparent !important;
+}
+.docsEmptyIcon .resourceTypeIcon {
+  width: 46px;
+  height: 46px;
+}
+.toolsLibrary .popover {
+  width: 250px;
+  z-index: 90;
+}
+.deleteConfirmBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+  animation: fadeIn 0.16s ease-out;
+}
+.deleteContextMenu {
+  position: fixed;
+  z-index: 190;
+  width: 164px;
+  padding: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  background: rgba(250, 250, 252, 0.94);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.18), 0 2px 7px rgba(0, 0, 0, 0.06);
+  backdrop-filter: saturate(180%) blur(22px);
+  animation: contextMenuIn 0.14s ease-out;
+}
+.deleteContextMenu button {
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 9px;
+  background: transparent;
+  color: #ff3b30;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.deleteContextMenu button:hover,
+.deleteContextMenu button:focus-visible {
+  background: #fee2e2;
+  color: #b42318;
+  outline: none;
+}
+.deleteContextMenu .contextAddSubnote {
+  color: #424245;
+}
+.deleteContextMenu .contextAddSubnote:hover,
+.deleteContextMenu .contextAddSubnote:focus-visible {
+  background: #ededf0;
+  color: #1d1d1f;
+}
+.deleteContextMenu .contextAddSubnote + button {
+  margin-top: 4px;
+  border-top: 1px solid #e5e5e7;
+  border-radius: 0 0 8px 8px;
+}
+.deleteContextMenu svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.deleteConfirm {
+  width: min(290px, 100%);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  background: rgba(248, 248, 250, 0.94);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.22);
+  text-align: center;
+  animation: confirmIn 0.18s ease-out;
+}
+.deleteConfirm h3 {
+  margin: 0;
+  padding: 22px 22px 5px;
+  color: #1d1d1f;
+  font-size: 14px;
+  font-weight: 650;
+}
+.deleteConfirm p {
+  margin: 0;
+  padding: 0 22px 20px;
+  color: #6e6e73;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.deleteConfirm > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #d2d2d7;
+}
+.deleteConfirm button {
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: #424245;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.deleteConfirm button + button {
+  border-left: 1px solid #d2d2d7;
+}
+.deleteConfirm button:hover,
+.deleteConfirm button:focus-visible {
+  background: rgba(0, 0, 0, 0.045);
+  outline: none;
+}
+.deleteConfirm button.danger {
+  color: #ff3b30;
+}
+@keyframes contextMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes confirmIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 @keyframes pop {
   from {
@@ -855,19 +2117,101 @@ td > button {
     grid-template-columns: 1fr;
   }
   .tableScroll {
-    overflow: auto;
+    overflow: visible;
   }
   table {
-    min-width: 420px;
+    min-width: 0;
+    table-layout: fixed;
+  }
+  th:first-child {
+    width: 54%;
+  }
+  th,
+  td {
+    padding-right: 8px;
+    padding-left: 8px;
   }
   .statusSelect {
-    width: 88px;
+    width: 100%;
+    max-width: 132px;
+  }
+  .dateField {
+    width: 100%;
+    max-width: 112px;
+  }
+  .columnNavigator {
+    width: 100%;
+  }
+  th .appleSelect {
+    width: 100%;
   }
   .resources {
     border-left: 0;
     border-top: 1px solid var(--line);
     border-radius: 0 0 12px 12px;
     min-height: 135px;
+  }
+  .toolsIntro {
+    margin-bottom: 22px;
+  }
+  .toolsIntro h2 {
+    font-size: 42px;
+  }
+  .toolsShell {
+    position: relative;
+    display: block;
+    min-height: 560px;
+    border-radius: 20px;
+  }
+  .toolsLibrary {
+    min-height: 560px;
+    border-right: 0;
+  }
+  .toolsViewer {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    min-height: 100%;
+    visibility: hidden;
+    opacity: 0;
+    transform: none;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    border-radius: 19px;
+  }
+  .toolsWorkspace.viewerOpen .toolsViewer {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+  }
+  .toolsViewerBar {
+    grid-template-columns: 26px minmax(0, 1fr) 26px;
+    gap: 9px;
+    padding-right: 10px;
+    padding-left: 12px;
+  }
+  .toolsFrame {
+    min-height: 500px;
+  }
+  .docsCanvas {
+    padding: 18px;
+  }
+  .docsPage {
+    min-height: 520px;
+    padding: 34px 26px;
+  }
+  .docsPage h1 {
+    font-size: 24px;
+  }
+  .docsTitleRow {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 24px;
+  }
+  .editorToolbar {
+    max-width: 100%;
+  }
+  .docsEditor {
+    min-height: 410px;
   }
   .popover {
     position: fixed;
@@ -903,15 +2247,21 @@ td > button {
   .headerNav {
     gap: 12px;
   }
-  .headerNav a {
+  .headerNav a,
+  .headerNav button {
     font-size: 10px;
   }
   .teamBlock {
     align-items: center;
     padding: 0;
   }
-  .avatar,
+  .avatar {
+    display: none;
+  }
   .circleButton {
+    display: none;
+  }
+  .avatar {
     width: 37px;
     height: 37px;
   }
