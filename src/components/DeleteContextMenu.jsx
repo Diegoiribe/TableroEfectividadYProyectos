@@ -4,7 +4,8 @@ export default function DeleteContextMenu({
   menu,
   onClose,
   onDelete,
-  onAddSubnote
+  onAddSubnote,
+  onAddFile
 }) {
   useEffect(() => {
     if (!menu) return;
@@ -22,7 +23,10 @@ export default function DeleteContextMenu({
 
   if (!menu) return null;
   const left = Math.min(menu.x, window.innerWidth - 172);
-  const top = Math.min(menu.y, window.innerHeight - (onAddSubnote ? 96 : 58));
+  const top = Math.min(
+    menu.y,
+    window.innerHeight - (onAddSubnote || onAddFile ? 132 : 58)
+  );
 
   return (
     <div
@@ -42,6 +46,19 @@ export default function DeleteContextMenu({
             <path d="M12 5v14M5 12h14" />
           </svg>
           <span>Agregar subnota</span>
+        </button>
+      )}
+      {onAddFile && (
+        <button
+          type="button"
+          role="menuitem"
+          className="contextAddFile"
+          onClick={onAddFile}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 12.5 14.5 6a3 3 0 0 1 4.2 4.2l-8.1 8.1a5 5 0 0 1-7.1-7.1l8-8" />
+          </svg>
+          <span>Agregar archivo</span>
         </button>
       )}
       <button type="button" role="menuitem" onClick={onDelete}>

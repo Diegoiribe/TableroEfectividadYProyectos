@@ -11,10 +11,123 @@ const fontSizes = [
   { value: '5', label: 'Título' }
 ];
 
+function formatMarkdownInline(value) {
+  return value
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>');
+}
+
+function parseMarkdownTableRow(line) {
+  const trimmed = line.trim();
+  const withoutEdges = trimmed
+    .replace(/^\|/, '')
+    .replace(/\|$/, '');
+  return withoutEdges.split('|').map((cell) => cell.trim());
+}
+
+function isMarkdownTableDivider(line) {
+  if (!line.includes('|')) return false;
+  const cells = parseMarkdownTableRow(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function markdownToHtml(markdown = '') {
+  const escaped = markdown
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const lines = escaped.split(/\r?\n/);
+  const output = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const next = lines[index + 1] ?? '';
+    const fence = line.trim().match(/^```([\w-]*)\s*$/);
+    if (fence) {
+      const code = [];
+      index += 1;
+      while (index < lines.length && !/^```\s*$/.test(lines[index].trim())) {
+        code.push(lines[index]);
+        index += 1;
+      }
+      const language = fence[1] ? ` data-language="${fence[1]}"` : '';
+      output.push(`<pre><code${language}>${code.join('\n')}</code></pre>`);
+      continue;
+    }
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      output.push('<hr>');
+      continue;
+    }
+    if (line.includes('|') && isMarkdownTableDivider(next)) {
+      const headers = parseMarkdownTableRow(line);
+      const rows = [];
+      index += 2;
+      while (
+        index < lines.length &&
+        lines[index].includes('|') &&
+        lines[index].trim()
+      ) {
+        rows.push(parseMarkdownTableRow(lines[index]));
+        index += 1;
+      }
+      index -= 1;
+      output.push(`<table><thead><tr>${headers.map((cell) => `<th>${formatMarkdownInline(cell)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${formatMarkdownInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+      continue;
+    }
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      const level = heading[1].length;
+      output.push(`<h${level}>${formatMarkdownInline(heading[2])}</h${level}>`);
+    } else if (/^\s*(?:[-*]\s+)?\[[ xX]\]\s+/.test(line)) {
+      const items = [];
+      let current = index;
+      while (
+        current < lines.length &&
+        /^\s*(?:[-*]\s+)?\[[ xX]\]\s+/.test(lines[current])
+      ) {
+        const match = lines[current].match(
+          /^\s*(?:[-*]\s+)?\[([ xX])\]\s+(.+)$/
+        );
+        items.push({ checked: match[1].toLowerCase() === 'x', text: match[2] });
+        current += 1;
+      }
+      output.push(`<ul class="markdownTaskList">${items.map((item) => `<li class="markdownTaskItem"><span class="markdownCheckbox${item.checked ? ' checked' : ''}"></span><span>${formatMarkdownInline(item.text)}</span></li>`).join('')}</ul>`);
+      index = current - 1;
+    } else if (/^[-*]\s+/.test(line)) {
+      const items = [];
+      let current = index;
+      while (current < lines.length && /^[-*]\s+/.test(lines[current])) {
+        items.push(lines[current].replace(/^[-*]\s+/, ''));
+        current += 1;
+      }
+      output.push(`<ul>${items.map((item) => `<li>${formatMarkdownInline(item)}</li>`).join('')}</ul>`);
+      index = current - 1;
+    } else if (/^\d+\.\s+/.test(line)) {
+      const items = [];
+      let current = index;
+      while (current < lines.length && /^\d+\.\s+/.test(lines[current])) {
+        items.push(lines[current].replace(/^\d+\.\s+/, ''));
+        current += 1;
+      }
+      output.push(`<ol>${items.map((item) => `<li>${formatMarkdownInline(item)}</li>`).join('')}</ol>`);
+      index = current - 1;
+    } else if (line.trim()) {
+      output.push(`<p>${formatMarkdownInline(line)}</p>`);
+    } else {
+      output.push('<p><br></p>');
+    }
+  }
+  return output.join('');
+}
+
 function sanitizeHtml(html = '') {
   const template = window.document.createElement('template');
   template.innerHTML = html;
   const allowed = new Set([
+    'A',
     'B',
     'BR',
     'DIV',
@@ -23,11 +136,15 @@ function sanitizeHtml(html = '') {
     'H1',
     'H2',
     'H3',
+    'HR',
     'I',
     'IMG',
     'LI',
     'OL',
     'P',
+    'CODE',
+    'PRE',
+    'SPAN',
     'STRONG',
     'TABLE',
     'TBODY',
@@ -45,8 +162,14 @@ function sanitizeHtml(html = '') {
     }
     [...node.attributes].forEach((attribute) => {
       const permitted =
+        (node.tagName === 'A' && attribute.name === 'href') ||
         (node.tagName === 'IMG' && ['src', 'alt'].includes(attribute.name)) ||
         (node.tagName === 'FONT' && attribute.name === 'size') ||
+        (attribute.name === 'class' &&
+          ['UL', 'LI', 'SPAN'].includes(node.tagName) &&
+          attribute.value.split(/\s+/).every((name) =>
+            ['markdownTaskList', 'markdownTaskItem', 'markdownCheckbox', 'checked'].includes(name)
+          )) ||
         (['TD', 'TH'].includes(node.tagName) &&
           ['colspan', 'rowspan'].includes(attribute.name));
       if (!permitted) node.removeAttribute(attribute.name);
@@ -56,12 +179,17 @@ function sanitizeHtml(html = '') {
       if (!source.startsWith('data:image/') && !source.startsWith('https://'))
         node.remove();
     }
+    if (node.tagName === 'A') {
+      const href = node.getAttribute('href') ?? '';
+      if (!href.startsWith('https://')) node.removeAttribute('href');
+    }
   });
   return template.innerHTML;
 }
 
 function DocumentEditor({ document: docItem, onSave }) {
   const editorRef = useRef(null);
+  const pageRef = useRef(null);
   const imageInputRef = useRef(null);
   const savedRange = useRef(null);
   const [saved, setSaved] = useState(true);
@@ -70,6 +198,10 @@ function DocumentEditor({ document: docItem, onSave }) {
     () => sanitizeHtml(docItem.content),
     [docItem.content]
   );
+  const [richHtml, setRichHtml] = useState(initialHtml);
+  const [markdownMode, setMarkdownMode] = useState(false);
+  const [markdownDraft, setMarkdownDraft] = useState('');
+  const [tableControls, setTableControls] = useState(null);
 
   useEffect(() => {
     const rememberSelection = () => {
@@ -103,6 +235,55 @@ function DocumentEditor({ document: docItem, onSave }) {
     reader.onload = () => runCommand('insertImage', reader.result);
     reader.readAsDataURL(file);
   };
+  const locateTable = (table) => {
+    if (!table || !pageRef.current) {
+      setTableControls(null);
+      return;
+    }
+    const tableRect = table.getBoundingClientRect();
+    const pageRect = pageRef.current.getBoundingClientRect();
+    setTableControls({
+      table,
+      left: tableRect.left - pageRect.left,
+      top: tableRect.top - pageRect.top,
+      width: tableRect.width,
+      height: tableRect.height
+    });
+  };
+  const addTableColumn = () => {
+    const table = tableControls?.table;
+    if (!table) return;
+    [...table.rows].forEach((row) => {
+      const cell = window.document.createElement(row.querySelector('th') ? 'th' : 'td');
+      cell.textContent = row.querySelector('th') ? 'Encabezado' : 'Contenido';
+      row.appendChild(cell);
+    });
+    setSaved(false);
+    window.requestAnimationFrame(() => locateTable(table));
+  };
+  const addTableRow = () => {
+    const table = tableControls?.table;
+    if (!table) return;
+    const columnCount = table.rows[0]?.cells.length || 2;
+    const row = table.tBodies[0]?.insertRow() ?? table.insertRow();
+    for (let index = 0; index < columnCount; index += 1) {
+      row.insertCell().textContent = 'Contenido';
+    }
+    setSaved(false);
+    window.requestAnimationFrame(() => locateTable(table));
+  };
+  const toggleMarkdown = () => {
+    if (markdownMode) {
+      const nextHtml = sanitizeHtml(markdownToHtml(markdownDraft));
+      setRichHtml(nextHtml);
+      setMarkdownMode(false);
+      setSaved(false);
+    } else {
+      setMarkdownDraft(editorRef.current?.innerText ?? '');
+      setMarkdownMode(true);
+      setTableControls(null);
+    }
+  };
 
   return (
     <>
@@ -121,7 +302,11 @@ function DocumentEditor({ document: docItem, onSave }) {
           className="docsSaveButton"
           disabled={saved}
           onClick={() => {
-            onSave(sanitizeHtml(editorRef.current?.innerHTML ?? ''));
+            const content = markdownMode
+              ? sanitizeHtml(markdownToHtml(markdownDraft))
+              : sanitizeHtml(editorRef.current?.innerHTML ?? richHtml);
+            onSave(content);
+            setRichHtml(content);
             setSaved(true);
           }}
         >
@@ -129,11 +314,13 @@ function DocumentEditor({ document: docItem, onSave }) {
         </button>
       </div>
       <div className="docsCanvas">
-        <article className="docsPage">
+        <article className="docsPage" ref={pageRef}>
           <span>DOCUMENTACIÓN DEL PROCESO</span>
           <div className="docsTitleRow">
             <h1>{docItem.name}</h1>
-            <div className="editorToolbar" aria-label="Formato del documento">
+            <div className={`editorToolbar ${markdownMode ? 'markdownActive' : ''}`} aria-label="Formato del documento">
+              {!markdownMode && (
+                <>
               <button
                 type="button"
                 aria-label="Negrita"
@@ -207,34 +394,112 @@ function DocumentEditor({ document: docItem, onSave }) {
                   event.target.value = '';
                 }}
               />
+                </>
+              )}
+              <button
+                type="button"
+                className="markdownToggle"
+                aria-label={markdownMode ? 'Aplicar Markdown' : 'Activar Markdown'}
+                title={markdownMode ? 'Convertir Markdown' : 'Pegar Markdown'}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  toggleMarkdown();
+                }}
+              >
+                <svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM6 9v6m0-6 3 3 3-3v6m3-3 2 2 2-2m-2 2V9" /></svg>
+              </button>
             </div>
           </div>
-          <div
-            ref={editorRef}
-            className="docsEditor"
-            contentEditable
-            suppressContentEditableWarning
-            data-placeholder="Escribe aquí el objetivo, responsables, pasos, recursos y notas del proceso…"
-            dangerouslySetInnerHTML={{ __html: initialHtml }}
-            onInput={() => setSaved(false)}
-            onPaste={(event) => {
-              const images = [...event.clipboardData.items]
-                .filter(
-                  (item) =>
-                    item.kind === 'file' && item.type.startsWith('image/')
-                )
-                .map((item) => item.getAsFile())
-                .filter(Boolean);
-              event.preventDefault();
-              if (images.length) images.forEach(insertImage);
-              else
-                runCommand(
-                  'insertText',
-                  event.clipboardData.getData('text/plain')
-                );
-            }}
-          />
+          {markdownMode ? (
+            <textarea
+              className="docsMarkdownEditor"
+              aria-label={`Markdown de ${docItem.name}`}
+              value={markdownDraft}
+              placeholder="Pega aquí tu Markdown…"
+              onChange={(event) => {
+                setMarkdownDraft(event.target.value);
+                setSaved(false);
+              }}
+            />
+          ) : (
+            <div
+              ref={editorRef}
+              className="docsEditor"
+              contentEditable
+              suppressContentEditableWarning
+              data-placeholder="Escribe aquí el objetivo, responsables, pasos, recursos y notas del proceso…"
+              dangerouslySetInnerHTML={{ __html: richHtml }}
+              onClick={(event) => {
+                const checkbox = event.target.closest('.markdownCheckbox');
+                if (checkbox) {
+                  checkbox.classList.toggle('checked');
+                  setSaved(false);
+                  return;
+                }
+                locateTable(event.target.closest('table'));
+              }}
+              onMouseOver={(event) => {
+                const table = event.target.closest('table');
+                if (table) locateTable(table);
+              }}
+              onInput={() => setSaved(false)}
+              onPaste={(event) => {
+                const images = [...event.clipboardData.items]
+                  .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+                  .map((item) => item.getAsFile())
+                  .filter(Boolean);
+                event.preventDefault();
+                if (images.length) images.forEach(insertImage);
+                else runCommand('insertText', event.clipboardData.getData('text/plain'));
+              }}
+            />
+          )}
+          {tableControls && !markdownMode && (
+            <>
+              <button
+                type="button"
+                className="tableAddControl addColumnControl"
+                style={{ left: tableControls.left + tableControls.width + 10, top: tableControls.top + tableControls.height / 2 }}
+                aria-label="Agregar columna"
+                title="Agregar columna"
+                onClick={addTableColumn}
+              ><PlusIcon /></button>
+              <button
+                type="button"
+                className="tableAddControl addRowControl"
+                style={{ left: tableControls.left + tableControls.width / 2, top: tableControls.top + tableControls.height + 10 }}
+                aria-label="Agregar fila"
+                title="Agregar fila"
+                onClick={addTableRow}
+              ><PlusIcon /></button>
+            </>
+          )}
         </article>
+      </div>
+    </>
+  );
+}
+
+function RelatedFileViewer({ document: docItem }) {
+  const isImage = docItem.fileType?.startsWith('image/');
+  const isPdf = docItem.fileType === 'application/pdf';
+  return (
+    <>
+      <div className="docsViewerBar">
+        <div className="docsViewerIdentity">
+          <i><ResourceIcon label={docItem.fileName} url={docItem.fileName} /></i>
+          <span><strong>{docItem.name}</strong><small>Archivo relacionado</small></span>
+        </div>
+        <a className="fileDownloadButton" href={docItem.fileData} download={docItem.fileName}>Descargar</a>
+      </div>
+      <div className="relatedFileCanvas">
+        {isImage ? (
+          <img src={docItem.fileData} alt={docItem.name} />
+        ) : isPdf ? (
+          <iframe src={docItem.fileData} title={docItem.name} />
+        ) : (
+          <div><ResourceIcon label={docItem.fileName} url={docItem.fileName} /><h3>{docItem.fileName}</h3><p>Usa Descargar para abrir este archivo.</p></div>
+        )}
       </div>
     </>
   );
@@ -254,12 +519,23 @@ export default function DocsWorkspace({
   const [contextMenu, setContextMenu] = useState(null);
   const [subnoteParent, setSubnoteParent] = useState(null);
   const [subnoteName, setSubnoteName] = useState('');
+  const [fileParent, setFileParent] = useState(null);
+  const [fileError, setFileError] = useState('');
   const [trashOpen, setTrashOpen] = useState(false);
   const [renderTime] = useState(() => Date.now());
   const [expanded, setExpanded] = useState(() => new Set());
   const pressTimer = useRef(null);
   const longPressTriggered = useRef(false);
   const active = documents.find((document) => document.id === selectedId);
+  const activeLineage = useMemo(() => {
+    const lineage = new Set();
+    let current = documents.find((document) => document.id === selectedId);
+    while (current) {
+      lineage.add(current.id);
+      current = documents.find((document) => document.id === current.parentId);
+    }
+    return lineage;
+  }, [documents, selectedId]);
   const documentIds = useMemo(
     () => new Set(documents.map((document) => document.id)),
     [documents]
@@ -281,6 +557,15 @@ export default function DocsWorkspace({
     window.document.addEventListener('mousedown', close);
     return () => window.document.removeEventListener('mousedown', close);
   }, [subnoteParent]);
+  useEffect(() => {
+    if (!fileParent) return;
+    const close = () => {
+      setFileParent(null);
+      setFileError('');
+    };
+    window.document.addEventListener('mousedown', close);
+    return () => window.document.removeEventListener('mousedown', close);
+  }, [fileParent]);
   const startLongPress = (event, docItem) => {
     if (event.pointerType === 'mouse' && event.button !== 2) return;
     const { clientX: x, clientY: y } = event;
@@ -299,8 +584,25 @@ export default function DocsWorkspace({
       else next.add(id);
       return next;
     });
-  const createDocument = (name, parentId = null) => {
-    const id = onAddDocument(name, parentId);
+  const expandDocumentBranch = (id) => {
+    const branch = new Set([id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      documents.forEach((document) => {
+        if (branch.has(document.parentId) && !branch.has(document.id)) {
+          branch.add(document.id);
+          changed = true;
+        }
+      });
+    }
+    const expandable = [...branch].filter((branchId) =>
+      documents.some((document) => document.parentId === branchId)
+    );
+    setExpanded((current) => new Set([...current, ...expandable]));
+  };
+  const createDocument = (name, parentId = null, details = {}) => {
+    const id = onAddDocument(name, parentId, details);
     if (parentId) setExpanded((current) => new Set([...current, parentId]));
     setSelectedId(id);
   };
@@ -312,7 +614,7 @@ export default function DocsWorkspace({
     const isExpanded = expanded.has(docItem.id);
     return (
       <div
-        className="docTreeNode"
+        className={`docTreeNode ${activeLineage.has(docItem.id) ? 'selectedBranch' : ''}`}
         key={docItem.id}
         style={{ '--doc-depth': depth }}
       >
@@ -342,7 +644,7 @@ export default function DocsWorkspace({
             >
               <ChevronIcon />
             </button>
-          ) : null}
+          ) : <span className="docBranchSpacer" aria-hidden="true" />}
           <button
             type="button"
             className={`toolCard docTreeCard ${
@@ -354,19 +656,14 @@ export default function DocsWorkspace({
                 return;
               }
               setSelectedId(docItem.id);
+              if (children.length) {
+                expandDocumentBranch(docItem.id);
+              }
             }}
           >
-            <i>
-              <ResourceIcon
-                label="Docs"
-                url="https://docs.google.com/document"
-              />
-            </i>
+            <i><ResourceIcon label={docItem.type === 'file' ? docItem.fileName : 'Docs'} url={docItem.type === 'file' ? docItem.fileName : 'https://docs.google.com/document'} /></i>
             <span>
               <strong>{docItem.name}</strong>
-              <small>
-                {depth ? 'Subnota del proceso' : 'Documentación interna'}
-              </small>
             </span>
           </button>
         </div>
@@ -548,11 +845,11 @@ export default function DocsWorkspace({
         </aside>
         <div className="toolsViewer docsViewer">
           {active ? (
-            <DocumentEditor
-              key={active.id}
-              document={active}
-              onSave={(content) => onUpdateDocument(active.id, content)}
-            />
+            active.type === 'file' ? (
+              <RelatedFileViewer key={active.id} document={active} />
+            ) : (
+              <DocumentEditor key={active.id} document={active} onSave={(content) => onUpdateDocument(active.id, content)} />
+            )
           ) : (
             <div className="toolsViewerEmpty">
               <div className="toolsWindowDots">
@@ -575,9 +872,18 @@ export default function DocsWorkspace({
       <DeleteContextMenu
         menu={contextMenu}
         onClose={() => setContextMenu(null)}
-        onAddSubnote={() => {
+        onAddSubnote={contextMenu?.resource?.type === 'file' ? undefined : () => {
           if (!contextMenu?.resource) return;
           setSubnoteParent({
+            ...contextMenu.resource,
+            menuX: contextMenu.x,
+            menuY: contextMenu.y
+          });
+          setContextMenu(null);
+        }}
+        onAddFile={contextMenu?.resource?.type === 'file' ? undefined : () => {
+          if (!contextMenu?.resource) return;
+          setFileParent({
             ...contextMenu.resource,
             menuX: contextMenu.x,
             menuY: contextMenu.y
@@ -638,6 +944,46 @@ export default function DocsWorkspace({
             <button type="submit" className="confirm">
               Crear
             </button>
+          </div>
+        </form>
+      )}
+      {fileParent && (
+        <form
+          className="subnotePopover filePopover addForm"
+          style={{
+            left: Math.max(8, Math.min(fileParent.menuX + 12, window.innerWidth - 258)),
+            top: Math.max(8, Math.min(fileParent.menuY, window.innerHeight - 220))
+          }}
+          onMouseDown={(event) => event.stopPropagation()}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const file = event.currentTarget.elements.relatedFile.files?.[0];
+            if (!file) return;
+            if (file.size > 700000) {
+              setFileError('El archivo debe pesar menos de 700 KB.');
+              return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+              createDocument(file.name, fileParent.id, {
+                type: 'file',
+                fileName: file.name,
+                fileType: file.type,
+                fileData: reader.result
+              });
+              setFileParent(null);
+              setFileError('');
+            };
+            reader.readAsDataURL(file);
+          }}
+        >
+          <span>ARCHIVO DE {fileParent.name.toUpperCase()}</span>
+          <h3>Archivo relacionado</h3>
+          <label>Seleccionar archivo<input name="relatedFile" type="file" required /></label>
+          {fileError && <p className="fileFormError">{fileError}</p>}
+          <div className="formActions">
+            <button type="button" onClick={() => { setFileParent(null); setFileError(''); }}>Cancelar</button>
+            <button type="submit" className="confirm">Agregar</button>
           </div>
         </form>
       )}

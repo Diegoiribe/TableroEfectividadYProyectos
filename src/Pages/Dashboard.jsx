@@ -69,13 +69,20 @@ export default function Dashboard() {
         tool.id ? currentTool.id !== tool.id : currentTool.url !== tool.url
       )
     }));
-  const addDocument = (name, parentId = null) => {
+  const addDocument = (name, parentId = null, details = {}) => {
     const id = Date.now();
     setDashboard((current) => ({
       ...current,
       docs: [
         ...(current.docs ?? []),
-        { id, parentId, name, content: '', updatedAt: Date.now() }
+        {
+          id,
+          parentId,
+          name,
+          content: '',
+          updatedAt: Date.now(),
+          ...details
+        }
       ]
     }));
     return id;

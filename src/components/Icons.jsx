@@ -31,6 +31,13 @@ function getResourceKind(label = '', url = '') {
   const link = url.trim().toLowerCase();
 
   if (
+    name.endsWith('.sql') ||
+    /\.sql(?:$|[?#])/.test(link)
+  ) {
+    return 'sql';
+  }
+
+  if (
     name.startsWith('sheets') ||
     name.startsWith('sheet') ||
     link.includes('docs.google.com/spreadsheets')
@@ -63,6 +70,16 @@ function getResourceKind(label = '', url = '') {
 
 export function ResourceIcon({ label, url }) {
   const kind = getResourceKind(label, url);
+
+  if (kind === 'sql') {
+    return (
+      <svg className="resourceTypeIcon sqlIcon" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#FF9F0A" d="M5 2.5h9l5 5v14H5z" />
+        <path fill="#FFD60A" d="M14 2.5v5h5z" />
+        <text x="12" y="16.5" textAnchor="middle" fill="#fff" fontSize="5.2" fontWeight="800" fontFamily="Arial, sans-serif">SQL</text>
+      </svg>
+    );
+  }
 
   if (kind === 'drive') {
     return (

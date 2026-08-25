@@ -1532,6 +1532,7 @@ td > button {
   padding: 34px;
 }
 .docsPage {
+  position: relative;
   width: min(720px, 100%);
   min-height: 760px;
   margin: 0 auto;
@@ -1630,8 +1631,31 @@ td > button {
   right: 0;
   left: auto;
 }
+.editorToolbar .markdownToggle.active,
+.editorToolbar.markdownActive .markdownToggle {
+  background: #e3e3e7;
+  color: #1d1d1f;
+}
 .editorImageInput {
   display: none;
+}
+.docsMarkdownEditor {
+  width: 100%;
+  min-height: 590px;
+  resize: vertical;
+  border: 1px solid #dedee2;
+  border-radius: 12px;
+  padding: 18px;
+  background: #f7f7f9;
+  color: #333336;
+  font: 11px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  outline: none;
+  tab-size: 2;
+}
+.docsMarkdownEditor:focus {
+  border-color: #a8a8ad;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(110, 110, 115, 0.1);
 }
 .docsEditor {
   width: 100%;
@@ -1667,6 +1691,108 @@ td > button {
   border: 1px solid #d2d2d7;
   border-radius: 10px;
 }
+.tableAddControl {
+  position: absolute;
+  z-index: 6;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d2d2d7;
+  border-radius: 50%;
+  padding: 0;
+  background: #fff;
+  color: #6e6e73;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+.tableAddControl:hover,
+.tableAddControl:focus-visible {
+  background: #1d1d1f;
+  color: #fff;
+  outline: none;
+}
+.tableAddControl svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.addColumnControl {
+  transform: translate(0, -50%);
+}
+.addRowControl {
+  transform: translate(-50%, 0);
+}
+.docsEditor pre {
+  margin: 18px 0;
+  padding: 15px 16px;
+  overflow-x: auto;
+  border: 1px solid #dedee2;
+  border-radius: 12px;
+  background: #f5f5f7;
+  color: #2c2c2e;
+  font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre;
+}
+.docsEditor pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: inherit;
+}
+.docsEditor p code,
+.docsEditor li code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: #f0f0f2;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+.docsEditor hr {
+  height: 1px;
+  margin: 24px 0;
+  border: 0;
+  background: #d2d2d7;
+}
+.docsEditor .markdownTaskList {
+  display: grid;
+  gap: 7px;
+  margin: 16px 0;
+  padding: 0;
+  list-style: none;
+}
+.docsEditor .markdownTaskItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.docsEditor .markdownCheckbox {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  display: grid;
+  place-items: center;
+  margin-top: 2px;
+  border: 1px solid #a1a1a6;
+  border-radius: 4px;
+  background: #fff;
+}
+.docsEditor .markdownCheckbox.checked {
+  border-color: #6e6e73;
+  background: #6e6e73;
+}
+.docsEditor .markdownCheckbox.checked:after {
+  content: '';
+  width: 6px;
+  height: 3px;
+  border-bottom: 1.5px solid #fff;
+  border-left: 1.5px solid #fff;
+  transform: translateY(-1px) rotate(-45deg);
+}
 .docsEditor th,
 .docsEditor td {
   border-right: 1px solid #e5e5e7;
@@ -1682,13 +1808,13 @@ td > button {
   font-weight: 650;
 }
 .docsTree {
-  gap: 6px;
+  gap: 1px;
 }
 .docTreeNode {
   min-width: 0;
 }
 .docTreeNode + .docTreeNode {
-  margin-top: 4px;
+  margin-top: 1px;
 }
 .docTreeRow {
   position: relative;
@@ -1697,15 +1823,21 @@ td > button {
   min-width: 0;
 }
 .docBranchToggle {
-  width: 18px;
-  height: 28px;
-  flex: 0 0 18px;
+  position: absolute;
+  top: 0;
+  left: 5px;
+  z-index: 2;
+  width: 16px;
+  height: 30px;
+}
+.docBranchSpacer {
+  display: none;
 }
 .docBranchToggle {
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 7px;
+  border-radius: 4px;
   padding: 0;
   background: transparent;
   color: #8e8e93;
@@ -1713,7 +1845,7 @@ td > button {
 }
 .docBranchToggle:hover,
 .docBranchToggle:focus-visible {
-  background: #e5e5e8;
+  background: transparent;
   color: #424245;
   outline: none;
 }
@@ -1731,50 +1863,61 @@ td > button {
 }
 .docTreeCard {
   min-width: 0;
-  grid-template-columns: 24px minmax(0, 1fr);
-  padding: 8px;
+  min-height: 30px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 7px;
+  border-radius: 5px;
+  padding: 4px 6px 4px 26px;
+}
+.docTreeNode.selectedBranch > .docTreeRow > .docTreeCard:not(.active) {
+  background: #f0f0f2;
 }
 .docTreeCard > i {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 .docTreeCard .resourceTypeIcon {
-  width: 21px;
-  height: 21px;
-}
-.docTreeChildren {
-  position: relative;
-  margin-left: 9px;
-  padding-left: 8px;
-  border-left: 1px solid #cfd0d4;
-  padding-top: 6px;
-}
-.docTreeChildren > .docTreeNode > .docTreeRow:before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -8px;
-  width: 8px;
-  border-top: 1px solid #cfd0d4;
-}
-.docTreeChildren .docTreeCard {
-  border-radius: 10px;
-  padding: 6px 8px;
-}
-.docTreeChildren .docTreeCard > i {
-  width: 21px;
-  height: 21px;
-}
-.docTreeChildren .docTreeCard .resourceTypeIcon {
   width: 18px;
   height: 18px;
 }
-.docTreeChildren .docTreeCard strong {
-  font-size: 9px;
-  font-weight: 600;
+.docTreeChildren {
+  position: relative;
+  margin-left: 16px;
+  margin-top: 7px;
+  padding-top: 1px;
+  padding-left: 9px;
+  border-left: 1px solid #cfd0d4;
 }
-.docTreeChildren .docTreeCard small {
-  font-size: 7px;
+.docTreeChildren .docTreeCard {
+  min-height: 34px;
+  border-radius: 5px;
+  padding: 5px 7px 5px 26px;
+}
+.docTreeChildren .docBranchToggle {
+  height: 34px;
+}
+.docTreeChildren .docTreeCard:hover:not(.active),
+.docTreeChildren .docTreeCard:focus-visible:not(.active) {
+  background: transparent;
+}
+.docTreeChildren .docTreeCard:hover strong,
+.docTreeChildren .docTreeCard:focus-visible strong {
+  color: #8e8e93;
+}
+.docTreeChildren .docTreeCard strong {
+  transition: color 0.16s ease;
+}
+.docTreeChildren .docTreeCard > i {
+  width: 22px;
+  height: 22px;
+}
+.docTreeChildren .docTreeCard .resourceTypeIcon {
+  width: 20px;
+  height: 20px;
+}
+.docTreeChildren .docTreeCard strong {
+  font-size: 10px;
+  font-weight: 600;
 }
 .subnotePopover {
   position: fixed;
@@ -1804,6 +1947,69 @@ td > button {
   color: #1d1d1f;
   font-size: 16px;
   font-weight: 650;
+}
+.filePopover input[type='file'] {
+  padding: 7px;
+  font-size: 8px;
+}
+.fileFormError {
+  margin: 7px 0 0;
+  color: #b42318;
+  font-size: 8px;
+}
+.fileDownloadButton {
+  min-width: 66px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #1d1d1f;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.relatedFileCanvas {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 28px;
+  background: #ececef;
+}
+.relatedFileCanvas > img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+.relatedFileCanvas > iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+}
+.relatedFileCanvas > div {
+  color: #6e6e73;
+  text-align: center;
+}
+.relatedFileCanvas > div > svg {
+  width: 42px;
+  height: 42px;
+}
+.relatedFileCanvas h3 {
+  margin: 12px 0 5px;
+  color: #424245;
+  font-size: 14px;
+}
+.relatedFileCanvas p {
+  margin: 0;
+  font-size: 9px;
 }
 .docsLibraryHead {
   gap: 10px;
@@ -1974,15 +2180,19 @@ td > button {
   color: #b42318;
   outline: none;
 }
-.deleteContextMenu .contextAddSubnote {
+.deleteContextMenu .contextAddSubnote,
+.deleteContextMenu .contextAddFile {
   color: #424245;
 }
 .deleteContextMenu .contextAddSubnote:hover,
-.deleteContextMenu .contextAddSubnote:focus-visible {
+.deleteContextMenu .contextAddSubnote:focus-visible,
+.deleteContextMenu .contextAddFile:hover,
+.deleteContextMenu .contextAddFile:focus-visible {
   background: #ededf0;
   color: #1d1d1f;
 }
-.deleteContextMenu .contextAddSubnote + button {
+.deleteContextMenu .contextAddFile + button,
+.deleteContextMenu .contextAddSubnote + button:last-child {
   margin-top: 4px;
   border-top: 1px solid #e5e5e7;
   border-radius: 0 0 8px 8px;
