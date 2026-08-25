@@ -39,6 +39,39 @@ header {
   align-items: center;
   gap: 32px;
 }
+.syncStatus {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 0 9px;
+  background: #f5f5f7;
+  color: #6e6e73;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.syncStatus i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+.syncStatus.saving i,
+.syncStatus.connecting i {
+  background: #ff9f0a;
+}
+.syncStatus.synced i {
+  background: #34c759;
+}
+.syncStatus.error {
+  background: #fff0ef;
+  color: #a52a24;
+}
+.syncStatus.error i {
+  background: #ff453a;
+}
 .headerNav {
   display: flex;
   align-items: center;
@@ -1733,7 +1766,8 @@ td > button {
   border-radius: 12px;
   background: #f5f5f7;
   color: #2c2c2e;
-  font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
   white-space: pre;
 }
 .docsEditor pre code {
@@ -2304,6 +2338,13 @@ td > button {
     margin-bottom: 40px;
     padding: 0 18px;
     column-gap: 18px;
+  }
+  .syncStatus {
+    min-height: 22px;
+    padding: 0 8px;
+  }
+  .syncStatus span {
+    display: none;
   }
   .avatar:nth-child(n + 3) {
     display: none;

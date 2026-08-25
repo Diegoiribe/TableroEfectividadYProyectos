@@ -1,15 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  doc,
-  getDoc,
-  onSnapshot,
-  serverTimestamp,
-  setDoc
-} from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const STORAGE_KEY = 'tablero-interno-data';
-const MIGRATION_KEY = 'tablero-interno-cloud-migrated-tablerointerno2';
+const DIRTY_KEY = 'tablero-interno-cloud-pending-tablerointerno2';
 const dashboardRef = doc(db, 'dashboards', 'principal');
 const DEMO_ROW_IDS = new Set([1, 2, 3, 4, 5, 6, 1787351063387]);
 const TRASH_LIFETIME = 5 * 24 * 60 * 60 * 1000;
@@ -55,19 +49,19 @@ function writeLocal(data) {
   }
 }
 
-function cloudMigrationDone() {
+function localSavePending() {
   try {
-    return localStorage.getItem(MIGRATION_KEY) === 'true';
+    return localStorage.getItem(DIRTY_KEY) === 'true';
   } catch {
-    return true;
+    return false;
   }
 }
 
-function markCloudMigrationDone() {
+function markLocalSavePending(pending) {
   try {
-    localStorage.setItem(MIGRATION_KEY, 'true');
+    localStorage.setItem(DIRTY_KEY, String(pending));
   } catch {
-    // Firestore already contains the merged data.
+    // Firestore remains the primary persistence layer.
   }
 }
 
@@ -184,94 +178,41 @@ export function useDashboardStorage(initialData) {
 
   const updateData = (next) => {
     localDirtyRef.current = true;
+    markLocalSavePending(true);
     changeVersionRef.current += 1;
     setData(next);
   };
 
   useEffect(() => {
     let active = true;
-    let connectionTimeout;
-    let unsubscribe = () => {};
 
     const connect = async () => {
       try {
-        if (!cloudMigrationDone()) {
-          const remoteSnapshot = await getDoc(dashboardRef);
-          if (!active) return;
-          const remoteData = remoteSnapshot.exists()
-            ? {
-                members: remoteSnapshot.data().members,
-                tables: remoteSnapshot.data().tables,
-                tools: remoteSnapshot.data().tools ?? [],
-                docs: remoteSnapshot.data().docs ?? [],
-                docsTrash: remoteSnapshot.data().docsTrash ?? []
-              }
-            : { members: [], tables: {}, tools: [], docs: [], docsTrash: [] };
-          const merged = mergeDashboards(remoteData, dataRef.current);
+        const remoteSnapshot = await getDoc(dashboardRef);
+        if (!active) return;
+        const remoteData = remoteSnapshot.exists()
+          ? removeDemoRows({
+              members: remoteSnapshot.data().members,
+              tables: remoteSnapshot.data().tables,
+              tools: remoteSnapshot.data().tools ?? [],
+              docs: remoteSnapshot.data().docs ?? [],
+              docsTrash: remoteSnapshot.data().docsTrash ?? []
+            })
+          : { members: [], tables: {}, tools: [], docs: [], docsTrash: [] };
+        const merged = mergeDashboards(remoteData, dataRef.current);
+        const needsCloudSave =
+          localSavePending() ||
+          !remoteSnapshot.exists() ||
+          JSON.stringify(merged) !== JSON.stringify(remoteData);
 
-          await setDoc(dashboardRef, {
-            ...merged,
-            updatedAt: serverTimestamp()
-          });
-          markCloudMigrationDone();
-          dataRef.current = merged;
-          setData(merged);
-          writeLocal(merged);
-        }
-
-        unsubscribe = onSnapshot(
-          dashboardRef,
-          { includeMetadataChanges: true },
-          (snapshot) => {
-            window.clearTimeout(connectionTimeout);
-            cloudAvailableRef.current = true;
-            if (snapshot.exists()) {
-              const remote = snapshot.data();
-              if (remote.members && remote.tables) {
-                const next = removeDemoRows({
-                  members: remote.members,
-                  tables: remote.tables,
-                  tools: remote.tools ?? [],
-                  docs: remote.docs ?? [],
-                  docsTrash: remote.docsTrash ?? []
-                });
-                const nextValue = JSON.stringify(next);
-                const currentValue = JSON.stringify(dataRef.current);
-                if (
-                  localDirtyRef.current &&
-                  nextValue === currentValue &&
-                  !snapshot.metadata.hasPendingWrites
-                ) {
-                  localDirtyRef.current = false;
-                  writeLocal(next);
-                } else if (
-                  !localDirtyRef.current &&
-                  nextValue !== currentValue
-                ) {
-                  dataRef.current = next;
-                  setData(next);
-                  writeLocal(next);
-                }
-              }
-            }
-            setRemoteReady(true);
-            setSyncState('synced');
-          },
-          () => {
-            window.clearTimeout(connectionTimeout);
-            cloudAvailableRef.current = false;
-            setRemoteReady(true);
-            setSyncState('local');
-          }
-        );
-
-        connectionTimeout = window.setTimeout(() => {
-          cloudAvailableRef.current = false;
-          unsubscribe();
-          setRemoteReady(true);
-          setSyncState('local');
-        }, 5000);
-      } catch {
+        dataRef.current = merged;
+        localDirtyRef.current = needsCloudSave;
+        setData(merged);
+        writeLocal(merged);
+        setRemoteReady(true);
+        setSyncState(needsCloudSave ? 'saving' : 'synced');
+      } catch (error) {
+        console.error('No se pudo conectar con Firestore.', error);
         cloudAvailableRef.current = false;
         setRemoteReady(true);
         setSyncState('local');
@@ -282,15 +223,14 @@ export function useDashboardStorage(initialData) {
 
     return () => {
       active = false;
-      window.clearTimeout(connectionTimeout);
-      unsubscribe();
     };
   }, []);
 
   useEffect(() => {
     dataRef.current = data;
     writeLocal(data);
-    if (!remoteReady || !cloudAvailableRef.current) return;
+    if (!remoteReady || !cloudAvailableRef.current || !localDirtyRef.current)
+      return;
 
     const version = changeVersionRef.current;
     const timeout = window.setTimeout(async () => {
@@ -298,12 +238,19 @@ export function useDashboardStorage(initialData) {
       try {
         await setDoc(dashboardRef, { ...data, updatedAt: serverTimestamp() });
         if (changeVersionRef.current === version) {
+          localDirtyRef.current = false;
+          markLocalSavePending(false);
           setSyncState('synced');
         }
-      } catch {
-        if (changeVersionRef.current === version) setSyncState('local');
+      } catch (error) {
+        console.error(
+          'No se pudieron guardar los cambios en Firestore.',
+          error
+        );
+        markLocalSavePending(true);
+        if (changeVersionRef.current === version) setSyncState('error');
       }
-    }, 350);
+    }, 1000);
 
     return () => window.clearTimeout(timeout);
   }, [data, remoteReady]);

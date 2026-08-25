@@ -10,7 +10,7 @@ import { useDashboardStorage } from '../hooks/useDashboardStorage';
 export default function Dashboard() {
   const [view, setView] = useState('training');
   const [section, setSection] = useState('tables');
-  const [dashboard, setDashboard] = useDashboardStorage({
+  const [dashboard, setDashboard, syncState] = useDashboardStorage({
     members: ['Diego', 'Esteban', 'JR'],
     tables: initialTables,
     tools: [],
@@ -176,6 +176,29 @@ export default function Dashboard() {
           <p>Seguimiento de proyectos</p>
         </div>
         <div className="headerActions">
+          <div
+            className={`syncStatus ${syncState}`}
+            title={
+              syncState === 'error'
+                ? 'Firebase no pudo guardar los cambios. Se conservan localmente.'
+                : 'Estado de sincronización con Firebase'
+            }
+            role="status"
+            aria-live="polite"
+          >
+            <i />
+            <span>
+              {syncState === 'connecting'
+                ? 'Conectando'
+                : syncState === 'saving'
+                ? 'Guardando'
+                : syncState === 'synced'
+                ? 'Sincronizado'
+                : syncState === 'error'
+                ? 'Error al guardar'
+                : 'Solo local'}
+            </span>
+          </div>
           <nav className="headerNav" aria-label="Secciones del tablero">
             <button
               type="button"
