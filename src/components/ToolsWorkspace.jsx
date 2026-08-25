@@ -19,6 +19,17 @@ function hostname(url) {
   }
 }
 
+function isLocalAddress(url) {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'localhost' || host === '0.0.0.0' || host === '::1' ||
+      host.startsWith('127.') || host.startsWith('10.') ||
+      host.startsWith('192.168.') || /^172\.(?:1[6-9]|2\d|3[01])\./.test(host);
+  } catch {
+    return false;
+  }
+}
+
 export default function ToolsWorkspace({
   resources,
   onAddResource,
@@ -230,7 +241,9 @@ export default function ToolsWorkspace({
                 allow="clipboard-read; clipboard-write; fullscreen"
               />
               <p className="toolsFrameHint">
-                Si el sitio no permite mostrarse aquí, usa “Abrir aparte”.
+                {isLocalAddress(active.url)
+                  ? 'El servidor local debe estar encendido en este dispositivo. Si bloquea el visor, usa “Abrir aparte”.'
+                  : 'Si el sitio no permite mostrarse aquí, usa “Abrir aparte”.'}
               </p>
             </>
           ) : (

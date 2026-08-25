@@ -1017,6 +1017,15 @@ td > button {
   border-color: #a8a8ad;
   box-shadow: 0 0 0 3px #6e6e7314;
 }
+.addForm .addFormError {
+  display: block;
+  float: none;
+  margin-top: 6px;
+  color: #b42318;
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1.35;
+}
 .formActions {
   display: flex;
   justify-content: flex-end;
