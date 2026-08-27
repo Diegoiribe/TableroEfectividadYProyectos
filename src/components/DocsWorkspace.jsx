@@ -655,8 +655,9 @@ export default function DocsWorkspace({
                 longPressTriggered.current = false;
                 return;
               }
-              setSelectedId(docItem.id);
-              if (children.length) {
+              const closingPreview = selectedId === docItem.id;
+              setSelectedId(closingPreview ? null : docItem.id);
+              if (!closingPreview && children.length) {
                 expandDocumentBranch(docItem.id);
               }
             }}

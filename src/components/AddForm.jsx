@@ -15,6 +15,11 @@ function normalizeUrl(value) {
   return parsed.href;
 }
 
+function isPublishedDashboard() {
+  if (typeof window === 'undefined') return false;
+  return !['localhost', '127.0.0.1'].includes(window.location.hostname);
+}
+
 export default function AddForm({ type, onSubmit, onCancel }) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -24,6 +29,14 @@ export default function AddForm({ type, onSubmit, onCancel }) {
     if (!name.trim() || (type === 'resource' && !url.trim())) return;
     try {
       const normalizedUrl = url.trim() ? normalizeUrl(url) : '';
+      if (
+        type === 'resource' &&
+        isPublishedDashboard() &&
+        new URL(normalizedUrl).protocol !== 'https:'
+      ) {
+        setUrlError('En Vercel necesitas la URL pública HTTPS de la herramienta; localhost no está disponible.');
+        return;
+      }
       setUrlError('');
       onSubmit({ name: name.trim(), url: normalizedUrl });
     } catch {

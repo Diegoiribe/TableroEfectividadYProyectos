@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DocsWorkspace from '../components/DocsWorkspace';
 import TeamMembers from '../components/TeamMembers';
 import ToolsWorkspace from '../components/ToolsWorkspace';
@@ -10,6 +10,7 @@ import { useDashboardStorage } from '../hooks/useDashboardStorage';
 export default function Dashboard() {
   const [view, setView] = useState('training');
   const [section, setSection] = useState('tables');
+  const [publishedMobile, setPublishedMobile] = useState(false);
   const [dashboard, setDashboard, syncState] = useDashboardStorage({
     members: ['Diego', 'Esteban', 'JR'],
     tables: initialTables,
@@ -18,6 +19,28 @@ export default function Dashboard() {
     docsTrash: []
   });
   const { members, tables, tools = [], docs = [], docsTrash = [] } = dashboard;
+
+  useEffect(() => {
+    const host = window.location.hostname;
+    const isLocalHost =
+      host === 'localhost' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host.startsWith('127.') ||
+      host.startsWith('10.') ||
+      host.startsWith('192.168.') ||
+      /^172\.(?:1[6-9]|2\d|3[01])\./.test(host);
+    const mobileQuery = window.matchMedia('(max-width: 720px)');
+    const updateMode = () => {
+      const tablesOnly = !isLocalHost && mobileQuery.matches;
+      setPublishedMobile(tablesOnly);
+      if (tablesOnly) setSection('tables');
+    };
+
+    updateMode();
+    mobileQuery.addEventListener('change', updateMode);
+    return () => mobileQuery.removeEventListener('change', updateMode);
+  }, []);
   const table = tables[view];
   const update = (changes) =>
     setDashboard((current) => ({
@@ -207,20 +230,24 @@ export default function Dashboard() {
             >
               Tables
             </button>
-            <button
-              type="button"
-              className={section === 'docs' ? 'active' : ''}
-              onClick={() => setSection('docs')}
-            >
-              Docs
-            </button>
-            <button
-              type="button"
-              className={section === 'tools' ? 'active' : ''}
-              onClick={() => setSection('tools')}
-            >
-              Tools
-            </button>
+            {!publishedMobile && (
+              <>
+                <button
+                  type="button"
+                  className={section === 'docs' ? 'active' : ''}
+                  onClick={() => setSection('docs')}
+                >
+                  Docs
+                </button>
+                <button
+                  type="button"
+                  className={section === 'tools' ? 'active' : ''}
+                  onClick={() => setSection('tools')}
+                >
+                  Tools
+                </button>
+              </>
+            )}
           </nav>
           <TeamMembers
             members={members}

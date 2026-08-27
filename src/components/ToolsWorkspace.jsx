@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AddForm from './AddForm';
-import DeleteConfirm from './DeleteConfirm';
 import DeleteContextMenu from './DeleteContextMenu';
 import {
   CloseIcon,
@@ -39,8 +38,14 @@ export default function ToolsWorkspace({
   const [addOpen, setAddOpen] = useState(false);
   const [frameVersion, setFrameVersion] = useState(0);
   const [contextMenu, setContextMenu] = useState(null);
-  const [pendingDelete, setPendingDelete] = useState(null);
+  const [libraryCollapsed, setLibraryCollapsed] = useState(false);
+  const [frameLayout, setFrameLayout] = useState({
+    width: 1440,
+    height: 620,
+    scale: 1
+  });
   const pressTimer = useRef(null);
+  const frameViewportRef = useRef(null);
   const longPressTriggered = useRef(false);
   const items = useMemo(() => {
     const unique = new Map();
@@ -59,8 +64,36 @@ export default function ToolsWorkspace({
     return [...unique.values()];
   }, [resources]);
   const active = items.find((item) => item.url === selectedUrl);
+  const localUnavailableFromDeployment = Boolean(
+    active &&
+      isLocalAddress(active.url) &&
+      typeof window !== 'undefined' &&
+      !['localhost', '127.0.0.1'].includes(window.location.hostname)
+  );
 
   useEffect(() => () => window.clearTimeout(pressTimer.current), []);
+
+  useEffect(() => {
+    const viewport = frameViewportRef.current;
+    if (!active || !viewport) return undefined;
+
+    const updateLayout = () => {
+      const { width, height } = viewport.getBoundingClientRect();
+      if (!width || !height) return;
+      const desktopWidth = 1440;
+      const scale = width < desktopWidth ? width / desktopWidth : 1;
+      setFrameLayout({
+        width: Math.max(desktopWidth, width),
+        height: height / scale,
+        scale
+      });
+    };
+
+    const observer = new ResizeObserver(updateLayout);
+    observer.observe(viewport);
+    updateLayout();
+    return () => observer.disconnect();
+  }, [active, libraryCollapsed]);
 
   const startLongPress = (event, resource) => {
     if (event.pointerType === 'mouse' && event.button !== 2) return;
@@ -83,7 +116,7 @@ export default function ToolsWorkspace({
         <p>Tus documentos, plataformas y herramientas en un solo lugar.</p>
       </div>
 
-      <div className="toolsShell">
+      <div className={`toolsShell ${libraryCollapsed ? 'libraryCollapsed' : ''}`}>
         <aside className="toolsLibrary" aria-label="Biblioteca de herramientas">
           <div className="toolsLibraryHead">
             <div>
@@ -193,14 +226,35 @@ export default function ToolsWorkspace({
           {active ? (
             <>
               <div className="toolsViewerBar">
-                <button
-                  type="button"
-                  className="toolsViewerClose"
-                  aria-label="Cerrar herramienta"
-                  onClick={() => setSelectedUrl(null)}
-                >
-                  <CloseIcon />
-                </button>
+                <div className="toolsViewerControls">
+                  <button
+                    type="button"
+                    className="toolsViewerClose"
+                    aria-label="Cerrar herramienta"
+                    onClick={() => setSelectedUrl(null)}
+                  >
+                    <CloseIcon />
+                  </button>
+                  <button
+                    type="button"
+                    className="toolsLibraryToggle"
+                    aria-label={libraryCollapsed ? 'Mostrar biblioteca' : 'Ocultar biblioteca'}
+                    title={libraryCollapsed ? 'Mostrar biblioteca' : 'Ocultar biblioteca'}
+                    aria-pressed={libraryCollapsed}
+                    onClick={() => {
+                      if (window.matchMedia('(max-width: 720px)').matches) {
+                        setSelectedUrl(null);
+                        return;
+                      }
+                      setLibraryCollapsed((current) => !current);
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3.5" y="4" width="17" height="16" rx="3" />
+                      <path d="M9 4v16" />
+                    </svg>
+                  </button>
+                </div>
                 <div className="toolsAddressBar" title={active.url}>
                   <svg
                     className="toolsLockIcon"
@@ -233,15 +287,24 @@ export default function ToolsWorkspace({
                   <ExternalIcon />
                 </a>
               </div>
-              <iframe
-                key={`${active.url}-${frameVersion}`}
-                className="toolsFrame"
-                src={active.url}
-                title={active.label}
-                allow="clipboard-read; clipboard-write; fullscreen"
-              />
+              <div className="toolsFrameViewport" ref={frameViewportRef}>
+                <iframe
+                  key={`${active.url}-${frameVersion}`}
+                  className="toolsFrame"
+                  src={active.url}
+                  title={active.label}
+                  allow="clipboard-read; clipboard-write; fullscreen"
+                  style={{
+                    width: `${frameLayout.width}px`,
+                    height: `${frameLayout.height}px`,
+                    transform: `scale(${frameLayout.scale})`
+                  }}
+                />
+              </div>
               <p className="toolsFrameHint">
-                {isLocalAddress(active.url)
+                {localUnavailableFromDeployment
+                  ? 'Una página publicada en Vercel no puede abrir localhost. Usa la URL HTTPS publicada de esta herramienta.'
+                  : isLocalAddress(active.url)
                   ? 'El servidor local debe estar encendido en este dispositivo. Si bloquea el visor, usa “Abrir aparte”.'
                   : 'Si el sitio no permite mostrarse aquí, usa “Abrir aparte”.'}
               </p>
@@ -267,19 +330,10 @@ export default function ToolsWorkspace({
         onClose={() => setContextMenu(null)}
         onDelete={() => {
           if (!contextMenu?.resource) return;
-          setPendingDelete(contextMenu.resource);
+          const resource = contextMenu.resource;
+          onDeleteResource(resource);
+          if (selectedUrl === resource.url) setSelectedUrl(null);
           setContextMenu(null);
-        }}
-      />
-      <DeleteConfirm
-        open={Boolean(pendingDelete)}
-        name={pendingDelete?.label}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={() => {
-          if (!pendingDelete) return;
-          onDeleteResource(pendingDelete);
-          if (selectedUrl === pendingDelete.url) setSelectedUrl(null);
-          setPendingDelete(null);
         }}
       />
     </section>

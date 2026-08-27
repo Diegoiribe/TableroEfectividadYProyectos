@@ -1096,6 +1096,10 @@ td > button {
   border-radius: 24px;
   background: #fff;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.08);
+  transition: grid-template-columns 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.toolsShell.libraryCollapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
 }
 .toolsLibrary {
   min-width: 0;
@@ -1107,6 +1111,18 @@ td > button {
   backdrop-filter: saturate(180%) blur(24px);
   border-radius: 23px 0 0 23px;
   z-index: 12;
+  overflow: hidden;
+  transition: opacity 0.18s ease, padding 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.toolsShell.libraryCollapsed .toolsLibrary {
+  padding-right: 0;
+  padding-left: 0;
+  border-right: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.toolsShell.libraryCollapsed .toolsViewer {
+  border-radius: 23px;
 }
 .toolsLibraryHead {
   display: flex;
@@ -1279,13 +1295,18 @@ td > button {
 .toolsViewerBar {
   min-height: 58px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 34px;
+  grid-template-columns: 66px minmax(0, 1fr) 34px;
   align-items: center;
   gap: 14px;
   padding: 10px 16px;
   border-bottom: 1px solid #d2d2d7;
   background: rgba(242, 242, 244, 0.94);
   backdrop-filter: saturate(180%) blur(20px);
+}
+.toolsViewerControls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .toolsViewerClose,
 .toolsMobileClose {
@@ -1332,6 +1353,34 @@ td > button {
 .toolsViewerClose:hover svg,
 .toolsViewerClose:focus-visible svg {
   opacity: 1;
+}
+.toolsLibraryToggle {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  color: #6e6e73;
+  cursor: pointer;
+}
+.toolsLibraryToggle:hover,
+.toolsLibraryToggle:focus-visible,
+.toolsLibraryToggle[aria-pressed='true'] {
+  background: rgba(0, 0, 0, 0.06);
+  color: #1d1d1f;
+  outline: none;
+}
+.toolsLibraryToggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .toolsMobileClose svg {
   width: 12px;
@@ -1429,12 +1478,20 @@ td > button {
   stroke: currentColor;
   stroke-width: 1.8;
 }
-.toolsFrame {
-  width: 100%;
+.toolsFrameViewport {
+  position: relative;
   flex: 1;
   min-height: 520px;
+  overflow: hidden;
+  background: #fff;
+}
+.toolsFrame {
+  position: absolute;
+  top: 0;
+  left: 0;
   border: 0;
   background: #fff;
+  transform-origin: top left;
 }
 .toolsFrameHint {
   margin: 0;
@@ -2423,6 +2480,9 @@ td > button {
     min-height: 560px;
     border-radius: 20px;
   }
+  .toolsShell.libraryCollapsed {
+    grid-template-columns: 1fr;
+  }
   .toolsLibrary {
     min-height: 560px;
     border-right: 0;
@@ -2444,12 +2504,12 @@ td > button {
     transform: none;
   }
   .toolsViewerBar {
-    grid-template-columns: 26px minmax(0, 1fr) 26px;
+    grid-template-columns: 60px minmax(0, 1fr) 26px;
     gap: 9px;
     padding-right: 10px;
     padding-left: 12px;
   }
-  .toolsFrame {
+  .toolsFrameViewport {
     min-height: 500px;
   }
   .docsCanvas {
