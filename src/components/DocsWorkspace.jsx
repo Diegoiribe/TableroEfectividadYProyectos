@@ -1,8 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import mermaid from 'mermaid';
 import AppleSelect from './AppleSelect';
 import DeleteContextMenu from './DeleteContextMenu';
 import { ChevronIcon, LinkIcon, PlusIcon, ResourceIcon } from './Icons';
 import Popover from './Popover';
+
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'strict',
+  theme: 'base',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  themeVariables: {
+    primaryColor: '#f5f5f7',
+    primaryTextColor: '#1d1d1f',
+    primaryBorderColor: '#a1a1a6',
+    lineColor: '#6e6e73',
+    secondaryColor: '#ffffff',
+    tertiaryColor: '#e8e8ed',
+    background: '#ffffff',
+    mainBkg: '#f5f5f7',
+    nodeBorder: '#a1a1a6',
+    clusterBkg: '#fbfbfd',
+    clusterBorder: '#d2d2d7',
+    edgeLabelBackground: '#ffffff'
+  },
+  flowchart: { curve: 'linear', htmlLabels: true, useMaxWidth: true }
+});
+
+let mermaidRenderSequence = 0;
+const mermaidDefinitionPattern = /^(?:flowchart|graph|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|gantt|pie|quadrantChart|requirementDiagram|gitGraph|mindmap|timeline|zenuml|sankey-beta|xychart-beta|block-beta|architecture-beta|packet-beta|kanban|radar-beta|treemap-beta)\b/i;
 
 const fontSizes = [
   { value: '2', label: 'Pequeño' },
@@ -53,8 +79,10 @@ function markdownToHtml(markdown = '') {
         code.push(lines[index]);
         index += 1;
       }
-      const language = fence[1] ? ` data-language="${fence[1]}"` : '';
-      output.push(`<pre><code${language}>${code.join('\n')}</code></pre>`);
+      const languageName = fence[1].toLowerCase();
+      const language = languageName ? ` data-language="${languageName}"` : '';
+      const mermaidClass = languageName === 'mermaid' ? ' class="markdownMermaid"' : '';
+      output.push(`<pre${mermaidClass}><code${language}>${code.join('\n')}</code></pre>`);
       continue;
     }
     if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
@@ -165,6 +193,10 @@ function sanitizeHtml(html = '') {
         (node.tagName === 'A' && attribute.name === 'href') ||
         (node.tagName === 'IMG' && ['src', 'alt'].includes(attribute.name)) ||
         (node.tagName === 'FONT' && attribute.name === 'size') ||
+        (node.tagName === 'PRE' && attribute.name === 'class' &&
+          attribute.value === 'markdownMermaid') ||
+        (node.tagName === 'CODE' && attribute.name === 'data-language' &&
+          attribute.value === 'mermaid') ||
         (attribute.name === 'class' &&
           ['UL', 'LI', 'SPAN'].includes(node.tagName) &&
           attribute.value.split(/\s+/).every((name) =>
@@ -185,6 +217,66 @@ function sanitizeHtml(html = '') {
     }
   });
   return template.innerHTML;
+}
+
+function restoreMermaidSources(root) {
+  const clone = root?.cloneNode(true);
+  if (!clone) return '';
+  clone.querySelectorAll('pre.markdownMermaid').forEach((block) => {
+    const source = block.dataset.mermaidSource ||
+      block.querySelector('code[data-language="mermaid"]')?.textContent || '';
+    const code = window.document.createElement('code');
+    code.setAttribute('data-language', 'mermaid');
+    code.textContent = source;
+    block.replaceChildren(code);
+    block.removeAttribute('contenteditable');
+    block.removeAttribute('data-mermaid-source');
+  });
+  return clone.innerHTML;
+}
+
+async function renderMermaidBlocks(root) {
+  const blocks = [...(root?.querySelectorAll('pre') ?? [])];
+  for (const block of blocks) {
+    const code = block.querySelector('code');
+    if (!code) continue;
+    const source = code.textContent?.trim();
+    const isExplicitMermaid = code.getAttribute('data-language') === 'mermaid' ||
+      block.classList.contains('markdownMermaid');
+    if (!source || (!isExplicitMermaid && !mermaidDefinitionPattern.test(source))) continue;
+    block.className = 'markdownMermaid';
+    block.dataset.mermaidSource = source;
+    block.setAttribute('contenteditable', 'false');
+    try {
+      mermaidRenderSequence += 1;
+      const id = `docs-mermaid-${Date.now()}-${mermaidRenderSequence}`;
+      const { svg, bindFunctions } = await mermaid.render(id, source);
+      if (!block.isConnected) continue;
+      const diagram = window.document.createElement('div');
+      diagram.className = 'markdownMermaidDiagram';
+      diagram.innerHTML = svg;
+      const renderedSvg = diagram.querySelector('svg');
+      const viewBox = renderedSvg?.getAttribute('viewBox')
+        ?.split(/\s+/)
+        .map(Number);
+      if (renderedSvg && viewBox?.length === 4) {
+        const availableWidth = Math.max(block.clientWidth, 1);
+        const maximumHeight = 640;
+        const scale = Math.min(
+          availableWidth / viewBox[2],
+          maximumHeight / viewBox[3],
+          1
+        );
+        renderedSvg.style.width = `${Math.max(viewBox[2] * scale, 1)}px`;
+        renderedSvg.style.maxWidth = '100%';
+        renderedSvg.style.maxHeight = `${maximumHeight}px`;
+      }
+      block.replaceChildren(diagram);
+      bindFunctions?.(diagram);
+    } catch {
+      block.removeAttribute('contenteditable');
+    }
+  }
 }
 
 function DocumentEditor({ document: docItem, onSave }) {
@@ -216,6 +308,14 @@ function DocumentEditor({ document: docItem, onSave }) {
     return () =>
       window.document.removeEventListener('selectionchange', rememberSelection);
   }, []);
+
+  useEffect(() => {
+    if (markdownMode || !editorRef.current) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      void renderMermaidBlocks(editorRef.current);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [richHtml, markdownMode, docItem.id]);
 
   const restoreSelection = () => {
     editorRef.current?.focus();
@@ -304,9 +404,13 @@ function DocumentEditor({ document: docItem, onSave }) {
           onClick={() => {
             const content = markdownMode
               ? sanitizeHtml(markdownToHtml(markdownDraft))
-              : sanitizeHtml(editorRef.current?.innerHTML ?? richHtml);
+              : sanitizeHtml(restoreMermaidSources(editorRef.current) || richHtml);
             onSave(content);
             setRichHtml(content);
+            if (!markdownMode && editorRef.current) {
+              editorRef.current.innerHTML = content;
+              window.requestAnimationFrame(() => void renderMermaidBlocks(editorRef.current));
+            }
             setSaved(true);
           }}
         >

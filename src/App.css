@@ -1844,6 +1844,32 @@ td > button {
   font: inherit;
   white-space: inherit;
 }
+.docsEditor pre.markdownMermaid {
+  min-height: 0;
+  display: block;
+  padding: 16px 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  scrollbar-width: none;
+  white-space: normal;
+}
+.docsEditor pre.markdownMermaid::-webkit-scrollbar {
+  display: none;
+}
+.docsEditor .markdownMermaidDiagram {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.docsEditor .markdownMermaidDiagram svg {
+  flex: 0 0 auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 640px;
+}
 .docsEditor p code,
 .docsEditor li code {
   padding: 2px 5px;
