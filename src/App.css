@@ -1858,6 +1858,11 @@ td > button {
 .docsEditor pre.markdownMermaid::-webkit-scrollbar {
   display: none;
 }
+
+.docsEditor pre.markdownMermaidError {
+  border-color: #ff9f0a;
+  background: #fff8ec;
+}
 .docsEditor .markdownMermaidDiagram {
   width: 100%;
   display: flex;

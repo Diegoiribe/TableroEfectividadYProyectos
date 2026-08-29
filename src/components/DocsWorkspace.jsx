@@ -71,15 +71,17 @@ function markdownToHtml(markdown = '') {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const next = lines[index + 1] ?? '';
-    const fence = line.trim().match(/^```([\w-]*)\s*$/);
+    const fence = line.trim().match(/^(`{3,}|~{3,})\s*([\w-]*)\s*$/);
     if (fence) {
       const code = [];
+      const fenceCharacter = fence[1][0];
+      const closingFence = new RegExp(`^${fenceCharacter}{3,}\\s*$`);
       index += 1;
-      while (index < lines.length && !/^```\s*$/.test(lines[index].trim())) {
+      while (index < lines.length && !closingFence.test(lines[index].trim())) {
         code.push(lines[index]);
         index += 1;
       }
-      const languageName = fence[1].toLowerCase();
+      const languageName = fence[2].toLowerCase();
       const language = languageName ? ` data-language="${languageName}"` : '';
       const mermaidClass = languageName === 'mermaid' ? ' class="markdownMermaid"' : '';
       output.push(`<pre${mermaidClass}><code${language}>${code.join('\n')}</code></pre>`);
@@ -149,6 +151,27 @@ function markdownToHtml(markdown = '') {
     }
   }
   return output.join('');
+}
+
+function editorToMarkdown(root) {
+  const clone = root?.cloneNode(true);
+  if (!clone) return '';
+  clone.querySelectorAll('pre.markdownMermaid').forEach((block) => {
+    const source = block.dataset.mermaidSource ||
+      block.querySelector('code[data-language="mermaid"]')?.textContent || '';
+    const fencedBlock = window.document.createElement('div');
+    fencedBlock.textContent = `\`\`\`mermaid\n${source}\n\`\`\``;
+    block.replaceWith(fencedBlock);
+  });
+  clone.style.position = 'fixed';
+  clone.style.left = '-100000px';
+  clone.style.top = '0';
+  clone.style.opacity = '0';
+  clone.style.pointerEvents = 'none';
+  window.document.body.appendChild(clone);
+  const markdown = clone.innerText;
+  clone.remove();
+  return markdown;
 }
 
 function sanitizeHtml(html = '') {
@@ -273,8 +296,13 @@ async function renderMermaidBlocks(root) {
       }
       block.replaceChildren(diagram);
       bindFunctions?.(diagram);
-    } catch {
+    } catch (error) {
       block.removeAttribute('contenteditable');
+      block.classList.add('markdownMermaidError');
+      block.title = error instanceof Error
+        ? `Mermaid: ${error.message}`
+        : 'Mermaid no pudo interpretar este diagrama.';
+      console.error('No se pudo renderizar el diagrama Mermaid.', error);
     }
   }
 }
@@ -379,7 +407,7 @@ function DocumentEditor({ document: docItem, onSave }) {
       setMarkdownMode(false);
       setSaved(false);
     } else {
-      setMarkdownDraft(editorRef.current?.innerText ?? '');
+      setMarkdownDraft(editorToMarkdown(editorRef.current));
       setMarkdownMode(true);
       setTableControls(null);
     }
