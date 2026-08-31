@@ -1774,6 +1774,32 @@ td > button {
   color: #b0b0b5;
   pointer-events: none;
 }
+.docsEditor ol,
+.docsEditor ul {
+  margin: 12px 0;
+  padding-left: 26px;
+}
+.docsEditor ol {
+  list-style: decimal;
+}
+.docsEditor ul {
+  list-style: disc;
+}
+.docsEditor li + li {
+  margin-top: 3px;
+}
+.docsEditor a {
+  color: #356a99;
+  text-decoration: underline;
+  text-decoration-color: rgba(53, 106, 153, 0.35);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.docsEditor h1[id],
+.docsEditor h2[id],
+.docsEditor h3[id] {
+  scroll-margin-top: 24px;
+}
 .docsEditor img {
   display: block;
   max-width: 100%;

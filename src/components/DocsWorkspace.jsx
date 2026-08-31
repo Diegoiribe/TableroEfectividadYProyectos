@@ -38,12 +38,52 @@ const fontSizes = [
 ];
 
 function formatMarkdownInline(value) {
-  return value
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
+  const protectedSegments = [];
+  const protect = (html) => {
+    const token = `%%MDTOKEN${protectedSegments.length}%%`;
+    protectedSegments.push(html);
+    return token;
+  };
+
+  const formatted = value
+    .replace(/`([^`]+)`/g, (_, code) => protect(`<code>${code}</code>`))
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, href) =>
+      protect(`<a href="${href}">${formatMarkdownInline(label)}</a>`)
+    )
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/__([^_]+)__/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/_([^_]+)_/g, '<em>$1</em>');
+
+  return formatted.replace(
+    /%%MDTOKEN(\d+)%%/g,
+    (_, index) => protectedSegments[Number(index)] ?? ''
+  );
+}
+
+function markdownHeadingSlug(value) {
+  return value
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_~]/g, '')
+    .normalize('NFKC')
+    .toLocaleLowerCase('es')
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+function isSafeMarkdownHref(href) {
+  return (
+    href.startsWith('#') ||
+    href.startsWith('https://') ||
+    href.startsWith('http://') ||
+    href.startsWith('mailto:') ||
+    href.startsWith('/') ||
+    href.startsWith('./') ||
+    href.startsWith('../')
+  );
 }
 
 function parseMarkdownTableRow(line) {
@@ -67,6 +107,7 @@ function markdownToHtml(markdown = '') {
     .replace(/>/g, '&gt;');
   const lines = escaped.split(/\r?\n/);
   const output = [];
+  const headingOccurrences = new Map();
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -110,7 +151,11 @@ function markdownToHtml(markdown = '') {
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
     if (heading) {
       const level = heading[1].length;
-      output.push(`<h${level}>${formatMarkdownInline(heading[2])}</h${level}>`);
+      const baseSlug = markdownHeadingSlug(heading[2]) || 'seccion';
+      const occurrence = headingOccurrences.get(baseSlug) ?? 0;
+      headingOccurrences.set(baseSlug, occurrence + 1);
+      const slug = occurrence ? `${baseSlug}-${occurrence}` : baseSlug;
+      output.push(`<h${level} id="${slug}">${formatMarkdownInline(heading[2])}</h${level}>`);
     } else if (/^\s*(?:[-*]\s+)?\[[ xX]\]\s+/.test(line)) {
       const items = [];
       let current = index;
@@ -214,6 +259,7 @@ function sanitizeHtml(html = '') {
     [...node.attributes].forEach((attribute) => {
       const permitted =
         (node.tagName === 'A' && attribute.name === 'href') ||
+        (['H1', 'H2', 'H3'].includes(node.tagName) && attribute.name === 'id') ||
         (node.tagName === 'IMG' && ['src', 'alt'].includes(attribute.name)) ||
         (node.tagName === 'FONT' && attribute.name === 'size') ||
         (node.tagName === 'PRE' && attribute.name === 'class' &&
@@ -236,8 +282,50 @@ function sanitizeHtml(html = '') {
     }
     if (node.tagName === 'A') {
       const href = node.getAttribute('href') ?? '';
-      if (!href.startsWith('https://')) node.removeAttribute('href');
+      if (!isSafeMarkdownHref(href)) node.removeAttribute('href');
     }
+  });
+
+  const rawLinkPattern = /\[([^\]]+)\]\(([^)\s]+)\)/g;
+  const textWalker = window.document.createTreeWalker(
+    template.content,
+    window.NodeFilter.SHOW_TEXT
+  );
+  const rawLinkNodes = [];
+  while (textWalker.nextNode()) {
+    const textNode = textWalker.currentNode;
+    if (
+      !textNode.parentElement?.closest('a, code, pre') &&
+      rawLinkPattern.test(textNode.nodeValue ?? '')
+    ) {
+      rawLinkNodes.push(textNode);
+    }
+    rawLinkPattern.lastIndex = 0;
+  }
+  rawLinkNodes.forEach((textNode) => {
+    const value = textNode.nodeValue ?? '';
+    const fragment = window.document.createDocumentFragment();
+    let lastIndex = 0;
+    for (const match of value.matchAll(rawLinkPattern)) {
+      const [source, label, href] = match;
+      if (!isSafeMarkdownHref(href)) continue;
+      fragment.append(value.slice(lastIndex, match.index));
+      const anchor = window.document.createElement('a');
+      anchor.setAttribute('href', href);
+      anchor.textContent = label;
+      fragment.append(anchor);
+      lastIndex = match.index + source.length;
+    }
+    fragment.append(value.slice(lastIndex));
+    textNode.replaceWith(fragment);
+  });
+
+  const headingOccurrences = new Map();
+  template.content.querySelectorAll('h1, h2, h3').forEach((heading) => {
+    const baseSlug = markdownHeadingSlug(heading.textContent ?? '') || 'seccion';
+    const occurrence = headingOccurrences.get(baseSlug) ?? 0;
+    headingOccurrences.set(baseSlug, occurrence + 1);
+    heading.id = occurrence ? `${baseSlug}-${occurrence}` : baseSlug;
   });
   return template.innerHTML;
 }
@@ -566,6 +654,15 @@ function DocumentEditor({ document: docItem, onSave }) {
                 if (checkbox) {
                   checkbox.classList.toggle('checked');
                   setSaved(false);
+                  return;
+                }
+                const anchor = event.target.closest('a[href^="#"]');
+                if (anchor) {
+                  event.preventDefault();
+                  const targetId = decodeURIComponent(anchor.getAttribute('href').slice(1));
+                  editorRef.current
+                    ?.querySelector(`[id="${CSS.escape(targetId)}"]`)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   return;
                 }
                 locateTable(event.target.closest('table'));
