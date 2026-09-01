@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import DocsWorkspace from '../components/DocsWorkspace';
-import TeamMembers from '../components/TeamMembers';
 import ToolsWorkspace from '../components/ToolsWorkspace';
 import TrackerTable from '../components/TrackerTable';
+import UpdatesWorkspace from '../components/UpdatesWorkspace';
 import ViewSelect from '../components/ViewSelect';
 import { initialTables } from '../data/dashboardData';
 import { useDashboardStorage } from '../hooks/useDashboardStorage';
@@ -12,13 +12,12 @@ export default function Dashboard() {
   const [section, setSection] = useState('tables');
   const [publishedMobile, setPublishedMobile] = useState(false);
   const [dashboard, setDashboard, syncState] = useDashboardStorage({
-    members: ['Diego', 'Esteban', 'JR'],
     tables: initialTables,
     tools: [],
     docs: [],
-    docsTrash: []
+    updates: []
   });
-  const { members, tables, tools = [], docs = [], docsTrash = [] } = dashboard;
+  const { tables, tools = [], docs = [], updates = [] } = dashboard;
 
   useEffect(() => {
     const host = window.location.hostname;
@@ -92,6 +91,26 @@ export default function Dashboard() {
         tool.id ? currentTool.id !== tool.id : currentTool.url !== tool.url
       )
     }));
+  const addUpdate = ({ subject, author, date, markdown }) =>
+    setDashboard((current) => ({
+      ...current,
+      updates: [
+        ...(current.updates ?? []),
+        {
+          id: Date.now(),
+          subject,
+          author,
+          date,
+          markdown,
+          createdAt: Date.now()
+        }
+      ]
+    }));
+  const deleteUpdate = (id) =>
+    setDashboard((current) => ({
+      ...current,
+      updates: (current.updates ?? []).filter((updateItem) => updateItem.id !== id)
+    }));
   const addDocument = (name, parentId = null, details = {}) => {
     const id = Date.now();
     setDashboard((current) => ({
@@ -135,37 +154,10 @@ export default function Dashboard() {
           }
         });
       }
-      const deletedAt = Date.now();
-      const removedDocuments = (current.docs ?? [])
-        .filter((document) => removedIds.has(document.id))
-        .map((document) => ({
-          ...document,
-          deletedAt,
-          trashGroupId: id
-        }));
       return {
         ...current,
         docs: (current.docs ?? []).filter(
           (document) => !removedIds.has(document.id)
-        ),
-        docsTrash: [...(current.docsTrash ?? []), ...removedDocuments]
-      };
-    });
-  const restoreDocument = (trashGroupId) =>
-    setDashboard((current) => {
-      const restored = (current.docsTrash ?? [])
-        .filter((document) => document.trashGroupId === trashGroupId)
-        .map((document) => {
-          const restoredDocument = { ...document };
-          delete restoredDocument.deletedAt;
-          delete restoredDocument.trashGroupId;
-          return restoredDocument;
-        });
-      return {
-        ...current,
-        docs: [...(current.docs ?? []), ...restored],
-        docsTrash: (current.docsTrash ?? []).filter(
-          (document) => document.trashGroupId !== trashGroupId
         )
       };
     });
@@ -194,9 +186,11 @@ export default function Dashboard() {
     <main className="page">
       <header>
         <div className="wordmark">
-          <span>Tablero interno</span>
-          <h1 className=" text-mauve-200/80">Tablero Interno</h1>
-          <p>Seguimiento de proyectos</p>
+          <h1>
+            <span>Universidad</span>
+            <span>Corporativa</span>
+          </h1>
+          <p>Tablero interno</p>
         </div>
         <div className="headerActions">
           <div
@@ -246,18 +240,16 @@ export default function Dashboard() {
                 >
                   Tools
                 </button>
+                <button
+                  type="button"
+                  className={section === 'updates' ? 'active' : ''}
+                  onClick={() => setSection('updates')}
+                >
+                  Updates
+                </button>
               </>
             )}
           </nav>
-          <TeamMembers
-            members={members}
-            onAdd={(name) =>
-              setDashboard((current) => ({
-                ...current,
-                members: [...current.members, name]
-              }))
-            }
-          />
         </div>
       </header>
       {section === 'tables' ? (
@@ -283,14 +275,18 @@ export default function Dashboard() {
           onAddResource={addTool}
           onDeleteResource={deleteTool}
         />
+      ) : section === 'updates' ? (
+        <UpdatesWorkspace
+          updates={updates}
+          onAddUpdate={addUpdate}
+          onDeleteUpdate={deleteUpdate}
+        />
       ) : (
         <DocsWorkspace
           documents={docs}
-          trash={docsTrash}
           onAddDocument={addDocument}
           onUpdateDocument={updateDocument}
           onDeleteDocument={deleteDocument}
-          onRestoreDocument={restoreDocument}
         />
       )}
     </main>

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import mermaid from 'mermaid';
 import AppleSelect from './AppleSelect';
 import DeleteContextMenu from './DeleteContextMenu';
@@ -46,6 +48,9 @@ function formatMarkdownInline(value) {
   };
 
   const formatted = value
+    .replace(/\\\((.+?)\\\)/g, (_, expression) =>
+      protect(`<span class="markdownMathInline"><code data-language="inline-math">${expression}</code></span>`)
+    )
     .replace(/`([^`]+)`/g, (_, code) => protect(`<code>${code}</code>`))
     .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, href) =>
       protect(`<a href="${href}">${formatMarkdownInline(label)}</a>`)
@@ -112,6 +117,76 @@ function markdownToHtml(markdown = '') {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const next = lines[index + 1] ?? '';
+    const alert = line.trim().match(
+      /^(?:&gt;\s*)?\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i
+    );
+    if (alert) {
+      const type = alert[1].toUpperCase();
+      const usesBlockquote = /^&gt;/.test(line.trim());
+      const body = [];
+      let current = index + 1;
+      while (current < lines.length) {
+        const candidate = lines[current];
+        if (usesBlockquote) {
+          if (!/^\s*&gt;(?:\s|$)/.test(candidate)) break;
+          body.push(candidate.replace(/^\s*&gt;\s?/, ''));
+        } else {
+          if (!candidate.trim()) break;
+          body.push(candidate);
+        }
+        current += 1;
+      }
+      const labels = {
+        NOTE: 'Nota',
+        TIP: 'Consejo',
+        IMPORTANT: 'Importante',
+        WARNING: 'Advertencia',
+        CAUTION: 'Precaución'
+      };
+      const bodyMarkdown = body.join('\n')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+      output.push(
+        `<aside class="markdownAlert markdownAlert${type[0]}${type.slice(1).toLowerCase()}" data-alert-type="${type}"><div class="markdownAlertTitle">${labels[type]}</div><div class="markdownAlertBody">${markdownToHtml(bodyMarkdown)}</div></aside>`
+      );
+      index = current - 1;
+      continue;
+    }
+    const bracketMathOpening = line.trim().match(/^(\\{1,2})\[$/);
+    const mathDelimiter = line.trim() === '$$'
+      ? '$$'
+      : bracketMathOpening
+        ? `${bracketMathOpening[1]}]`
+        : null;
+    if (mathDelimiter) {
+      const expression = [];
+      let closingIndex = index + 1;
+      while (
+        closingIndex < lines.length &&
+        lines[closingIndex].trim() !== mathDelimiter
+      ) {
+        expression.push(lines[closingIndex]);
+        closingIndex += 1;
+      }
+      if (closingIndex < lines.length) {
+        output.push(
+          `<div class="markdownMath"><code data-language="math">${expression.join('\n')}</code></div>`
+        );
+        index = closingIndex;
+        continue;
+      }
+    }
+    const singleLineMath = line.trim().match(
+      /^(?:\$\$([\s\S]+)\$\$|\\{1,2}\[([\s\S]+)\\{1,2}\])$/
+    );
+    if (singleLineMath) {
+      const expression = (singleLineMath[1] ?? singleLineMath[2]).trim();
+      output.push(
+        `<div class="markdownMath"><code data-language="math">${expression}</code></div>`
+      );
+      continue;
+    }
     const fence = line.trim().match(/^(`{3,}|~{3,})\s*([\w-]*)\s*$/);
     if (fence) {
       const code = [];
@@ -208,6 +283,28 @@ function editorToMarkdown(root) {
     fencedBlock.textContent = `\`\`\`mermaid\n${source}\n\`\`\``;
     block.replaceWith(fencedBlock);
   });
+  clone.querySelectorAll('.markdownMath').forEach((block) => {
+    const source = block.dataset.mathSource ||
+      block.querySelector('code[data-language="math"]')?.textContent || '';
+    const mathBlock = window.document.createElement('div');
+    mathBlock.textContent = `$$\n${source}\n$$`;
+    block.replaceWith(mathBlock);
+  });
+  clone.querySelectorAll('.markdownMathInline').forEach((block) => {
+    const source = block.dataset.mathSource ||
+      block.querySelector('code[data-language="inline-math"]')?.textContent || '';
+    const math = window.document.createTextNode(`\\(${source}\\)`);
+    block.replaceWith(math);
+  });
+  clone.querySelectorAll('.markdownAlert').forEach((block) => {
+    const type = block.dataset.alertType || 'NOTE';
+    const body = block.querySelector('.markdownAlertBody')?.innerText ?? '';
+    const source = [`> [!${type}]`, ...body.split('\n').map((line) => `> ${line}`)]
+      .join('\n');
+    const alertBlock = window.document.createElement('div');
+    alertBlock.textContent = source;
+    block.replaceWith(alertBlock);
+  });
   clone.style.position = 'fixed';
   clone.style.left = '-100000px';
   clone.style.top = '0';
@@ -219,11 +316,55 @@ function editorToMarkdown(root) {
   return markdown;
 }
 
+function upgradeLegacyMathBlocks(root) {
+  const openers = [...root.querySelectorAll('p')].filter(
+    (paragraph) => paragraph.textContent?.trim() === '$$'
+  );
+
+  openers.forEach((opener) => {
+    if (!opener.parentNode) return;
+    const expressionNodes = [];
+    let cursor = opener.nextSibling;
+    let closer = null;
+
+    while (cursor) {
+      if (
+        cursor.nodeType === window.Node.ELEMENT_NODE &&
+        cursor.tagName === 'P' &&
+        cursor.textContent?.trim() === '$$'
+      ) {
+        closer = cursor;
+        break;
+      }
+      expressionNodes.push(cursor);
+      cursor = cursor.nextSibling;
+    }
+
+    if (!closer) return;
+    const source = expressionNodes
+      .map((node) => node.textContent ?? '')
+      .join('\n')
+      .trim();
+    const mathBlock = window.document.createElement('div');
+    const code = window.document.createElement('code');
+    mathBlock.className = 'markdownMath';
+    code.setAttribute('data-language', 'math');
+    code.textContent = source;
+    mathBlock.appendChild(code);
+    opener.parentNode?.insertBefore(mathBlock, opener);
+    opener.remove();
+    expressionNodes.forEach((node) => node.remove());
+    closer.remove();
+  });
+}
+
 function sanitizeHtml(html = '') {
   const template = window.document.createElement('template');
   template.innerHTML = html;
+  upgradeLegacyMathBlocks(template.content);
   const allowed = new Set([
     'A',
+    'ASIDE',
     'B',
     'BR',
     'DIV',
@@ -265,7 +406,19 @@ function sanitizeHtml(html = '') {
         (node.tagName === 'PRE' && attribute.name === 'class' &&
           attribute.value === 'markdownMermaid') ||
         (node.tagName === 'CODE' && attribute.name === 'data-language' &&
-          attribute.value === 'mermaid') ||
+          ['mermaid', 'math', 'inline-math'].includes(attribute.value)) ||
+        (node.tagName === 'DIV' && attribute.name === 'class' &&
+          ['markdownMath', 'markdownAlertTitle', 'markdownAlertBody'].includes(attribute.value)) ||
+        (node.tagName === 'ASIDE' && attribute.name === 'class' &&
+          attribute.value.split(/\s+/).every((name) =>
+            ['markdownAlert', 'markdownAlertNote', 'markdownAlertTip',
+              'markdownAlertImportant', 'markdownAlertWarning',
+              'markdownAlertCaution'].includes(name)
+          )) ||
+        (node.tagName === 'ASIDE' && attribute.name === 'data-alert-type' &&
+          ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'].includes(attribute.value)) ||
+        (node.tagName === 'SPAN' && attribute.name === 'class' &&
+          attribute.value === 'markdownMathInline') ||
         (attribute.name === 'class' &&
           ['UL', 'LI', 'SPAN'].includes(node.tagName) &&
           attribute.value.split(/\s+/).every((name) =>
@@ -330,7 +483,7 @@ function sanitizeHtml(html = '') {
   return template.innerHTML;
 }
 
-function restoreMermaidSources(root) {
+function restoreRenderedSources(root) {
   const clone = root?.cloneNode(true);
   if (!clone) return '';
   clone.querySelectorAll('pre.markdownMermaid').forEach((block) => {
@@ -342,6 +495,28 @@ function restoreMermaidSources(root) {
     block.replaceChildren(code);
     block.removeAttribute('contenteditable');
     block.removeAttribute('data-mermaid-source');
+  });
+  clone.querySelectorAll('.markdownMath').forEach((block) => {
+    const source = block.dataset.mathSource ||
+      block.querySelector('code[data-language="math"]')?.textContent || '';
+    const code = window.document.createElement('code');
+    code.setAttribute('data-language', 'math');
+    code.textContent = source;
+    block.className = 'markdownMath';
+    block.replaceChildren(code);
+    block.removeAttribute('contenteditable');
+    block.removeAttribute('data-math-source');
+  });
+  clone.querySelectorAll('.markdownMathInline').forEach((block) => {
+    const source = block.dataset.mathSource ||
+      block.querySelector('code[data-language="inline-math"]')?.textContent || '';
+    const code = window.document.createElement('code');
+    code.setAttribute('data-language', 'inline-math');
+    code.textContent = source;
+    block.className = 'markdownMathInline';
+    block.replaceChildren(code);
+    block.removeAttribute('contenteditable');
+    block.removeAttribute('data-math-source');
   });
   return clone.innerHTML;
 }
@@ -395,6 +570,194 @@ async function renderMermaidBlocks(root) {
   }
 }
 
+function renderMathBlocks(root) {
+  const blocks = [...(root?.querySelectorAll('.markdownMath, .markdownMathInline') ?? [])];
+  blocks.forEach((block) => {
+    const inline = block.classList.contains('markdownMathInline');
+    const source = block.dataset.mathSource ||
+      block.querySelector(`code[data-language="${inline ? 'inline-math' : 'math'}"]`)?.textContent?.trim();
+    if (!source) return;
+    block.dataset.mathSource = source;
+    block.setAttribute('contenteditable', 'false');
+    try {
+      katex.render(source, block, {
+        displayMode: !inline,
+        throwOnError: false,
+        strict: false,
+        trust: false
+      });
+      block.classList.remove('markdownMathError');
+      block.removeAttribute('title');
+    } catch (error) {
+      block.classList.add('markdownMathError');
+      block.title = error instanceof Error
+        ? `Fórmula: ${error.message}`
+        : 'No se pudo interpretar la fórmula.';
+      console.error('No se pudo renderizar la fórmula.', error);
+    }
+  });
+}
+
+async function renderDocumentBlocks(root) {
+  await renderMermaidBlocks(root);
+  renderMathBlocks(root);
+}
+
+export function MarkdownContent({ markdown = '', className = '' }) {
+  const rootRef = useRef(null);
+  const html = useMemo(
+    () => sanitizeHtml(markdownToHtml(markdown)),
+    [markdown]
+  );
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      if (rootRef.current) void renderDocumentBlocks(rootRef.current);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [html]);
+
+  return (
+    <div
+      ref={rootRef}
+      className={`docsEditor ${className}`.trim()}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+export function MarkdownContentEditor({
+  markdown = '',
+  onChange,
+  className = '',
+  ariaLabel = 'Contenido Markdown'
+}) {
+  const editorRef = useRef(null);
+  const initialMarkdownRef = useRef(markdown);
+
+  useEffect(() => {
+    if (!editorRef.current) return undefined;
+    editorRef.current.innerHTML = sanitizeHtml(
+      markdownToHtml(initialMarkdownRef.current)
+    );
+    const frame = window.requestAnimationFrame(() => {
+      if (editorRef.current) void renderDocumentBlocks(editorRef.current);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  return (
+    <div
+      ref={editorRef}
+      className={`docsEditor ${className}`.trim()}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-label={ariaLabel}
+      aria-multiline="true"
+      onInput={() => onChange(editorToMarkdown(editorRef.current))}
+      onPaste={(event) => {
+        event.preventDefault();
+        window.document.execCommand(
+          'insertText',
+          false,
+          event.clipboardData.getData('text/plain')
+        );
+      }}
+    />
+  );
+}
+
+function collectDocumentStyles() {
+  return [...window.document.styleSheets]
+    .map((styleSheet) => {
+      try {
+        return [...styleSheet.cssRules].map((rule) => rule.cssText).join('\n');
+      } catch {
+        return '';
+      }
+    })
+    .join('\n');
+}
+
+function safeDownloadName(name) {
+  const cleaned = name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[<>:"/\\|?*]/g, '')
+    .split('')
+    .filter((character) => character.charCodeAt(0) >= 32)
+    .join('')
+    .trim();
+  return cleaned || 'informe';
+}
+
+function escapeHtmlText(value) {
+  const element = window.document.createElement('div');
+  element.textContent = value;
+  return element.innerHTML;
+}
+
+async function downloadRenderedReport(page, name, markdownContent = null) {
+  if (!page) return;
+  const renderHost = window.document.createElement('div');
+  renderHost.style.position = 'fixed';
+  renderHost.style.left = '-100000px';
+  renderHost.style.top = '0';
+  renderHost.style.width = '720px';
+  renderHost.style.pointerEvents = 'none';
+
+  const exportPage = page.cloneNode(true);
+  exportPage.querySelectorAll('.editorToolbar, .tableAddControl').forEach(
+    (control) => control.remove()
+  );
+  exportPage.querySelectorAll('[contenteditable]').forEach((element) =>
+    element.removeAttribute('contenteditable')
+  );
+
+  if (markdownContent !== null) {
+    const markdownEditor = exportPage.querySelector('.docsMarkdownEditor');
+    const renderedEditor = window.document.createElement('div');
+    renderedEditor.className = 'docsEditor';
+    renderedEditor.innerHTML = sanitizeHtml(markdownToHtml(markdownContent));
+    markdownEditor?.replaceWith(renderedEditor);
+  }
+
+  renderHost.appendChild(exportPage);
+  window.document.body.appendChild(renderHost);
+  await renderDocumentBlocks(exportPage);
+
+  const title = escapeHtmlText(name);
+  const styles = collectDocumentStyles();
+  const html = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>${styles}
+html,body{margin:0;min-height:100%;background:#ececef}
+body{box-sizing:border-box;padding:34px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.docsPage{box-sizing:border-box;margin:0 auto}
+.editorToolbar,.tableAddControl{display:none!important}
+@media print{html,body{background:#fff}body{padding:0}.docsPage{width:100%;border:0;box-shadow:none}}
+</style>
+</head>
+<body>${exportPage.outerHTML}</body>
+</html>`;
+  renderHost.remove();
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = window.document.createElement('a');
+  link.href = url;
+  link.download = `${safeDownloadName(name)}.html`;
+  window.document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function DocumentEditor({ document: docItem, onSave }) {
   const editorRef = useRef(null);
   const pageRef = useRef(null);
@@ -428,7 +791,7 @@ function DocumentEditor({ document: docItem, onSave }) {
   useEffect(() => {
     if (markdownMode || !editorRef.current) return undefined;
     const frame = window.requestAnimationFrame(() => {
-      void renderMermaidBlocks(editorRef.current);
+      void renderDocumentBlocks(editorRef.current);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [richHtml, markdownMode, docItem.id]);
@@ -513,25 +876,46 @@ function DocumentEditor({ document: docItem, onSave }) {
             <small>{saved ? 'Guardado' : 'Cambios sin guardar'}</small>
           </span>
         </div>
-        <button
-          type="button"
-          className="docsSaveButton"
-          disabled={saved}
-          onClick={() => {
-            const content = markdownMode
-              ? sanitizeHtml(markdownToHtml(markdownDraft))
-              : sanitizeHtml(restoreMermaidSources(editorRef.current) || richHtml);
-            onSave(content);
-            setRichHtml(content);
-            if (!markdownMode && editorRef.current) {
-              editorRef.current.innerHTML = content;
-              window.requestAnimationFrame(() => void renderMermaidBlocks(editorRef.current));
+        <div className="docsViewerActions">
+          <button
+            type="button"
+            className="docsDownloadButton"
+            aria-label={`Descargar informe ${docItem.name}`}
+            title="Descargar informe"
+            onClick={() =>
+              void downloadRenderedReport(
+                pageRef.current,
+                docItem.name,
+                markdownMode ? markdownDraft : null
+              )
             }
-            setSaved(true);
-          }}
-        >
-          Guardar
-        </button>
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 19h14" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="docsSaveButton"
+            disabled={saved}
+            onClick={() => {
+              const content = markdownMode
+                ? sanitizeHtml(markdownToHtml(markdownDraft))
+                : sanitizeHtml(restoreRenderedSources(editorRef.current) || richHtml);
+              onSave(content);
+              setRichHtml(content);
+              if (!markdownMode && editorRef.current) {
+                editorRef.current.innerHTML = content;
+                window.requestAnimationFrame(() =>
+                  void renderDocumentBlocks(editorRef.current)
+                );
+              }
+              setSaved(true);
+            }}
+          >
+            Guardar
+          </button>
+        </div>
       </div>
       <div className="docsCanvas">
         <article className="docsPage" ref={pageRef}>
@@ -736,11 +1120,9 @@ function RelatedFileViewer({ document: docItem }) {
 
 export default function DocsWorkspace({
   documents,
-  trash = [],
   onAddDocument,
   onUpdateDocument,
-  onDeleteDocument,
-  onRestoreDocument
+  onDeleteDocument
 }) {
   const [selectedId, setSelectedId] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -750,8 +1132,6 @@ export default function DocsWorkspace({
   const [subnoteName, setSubnoteName] = useState('');
   const [fileParent, setFileParent] = useState(null);
   const [fileError, setFileError] = useState('');
-  const [trashOpen, setTrashOpen] = useState(false);
-  const [renderTime] = useState(() => Date.now());
   const [expanded, setExpanded] = useState(() => new Set());
   const pressTimer = useRef(null);
   const longPressTriggered = useRef(false);
@@ -771,9 +1151,6 @@ export default function DocsWorkspace({
   );
   const roots = documents.filter(
     (document) => !document.parentId || !documentIds.has(document.parentId)
-  );
-  const trashRoots = trash.filter(
-    (document) => document.id === document.trashGroupId
   );
 
   useEffect(() => () => window.clearTimeout(pressTimer.current), []);
@@ -922,156 +1299,71 @@ export default function DocsWorkspace({
         >
           <div className="toolsLibraryHead docsLibraryHead">
             <div>
-              <span>{trashOpen ? 'Eliminados' : 'Biblioteca'}</span>
-              <strong>
-                {trashOpen
-                  ? `${trashRoots.length} elementos · 5 días`
-                  : `${documents.length} documentos`}
-              </strong>
+              <span>Biblioteca</span>
+              <strong>{documents.length} documentos</strong>
             </div>
-            <button
-              type="button"
-              className={`docsTrashButton ${trashOpen ? 'active' : ''}`}
-              aria-label={trashOpen ? 'Volver a Biblioteca' : 'Ver eliminados'}
-              title={trashOpen ? 'Volver a Biblioteca' : 'Eliminados'}
-              onClick={() => {
-                setTrashOpen((current) => !current);
-                setSelectedId(null);
-              }}
-            >
-              {trashOpen ? (
-                <svg viewBox="0 0 24 24">
-                  <path d="m9 6-6 6 6 6M3 12h13a5 5 0 0 1 5 5v1" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" />
-                </svg>
-              )}
-              {!trashOpen && trashRoots.length > 0 && (
-                <i>{trashRoots.length}</i>
-              )}
-            </button>
           </div>
           <div className="toolsList docsTree">
-            {trashOpen ? (
-              <>
-                {trashRoots.map((document) => {
-                  const children =
-                    trash.filter(
-                      (item) => item.trashGroupId === document.trashGroupId
-                    ).length - 1;
-                  const remaining = Math.max(
-                    1,
-                    5 - Math.floor((renderTime - document.deletedAt) / 86400000)
-                  );
-                  return (
-                    <div className="trashDocCard" key={document.id}>
-                      <i>
-                        <ResourceIcon
-                          label="Docs"
-                          url="https://docs.google.com/document"
-                        />
-                      </i>
-                      <span>
-                        <strong>{document.name}</strong>
-                        <small>
-                          {children > 0 ? `${children} subnotas · ` : ''}
-                          {remaining} días restantes
-                        </small>
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={`Restaurar ${document.name}`}
-                        title="Restaurar"
-                        onClick={() => onRestoreDocument(document.trashGroupId)}
-                      >
-                        <svg viewBox="0 0 24 24">
-                          <path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5" />
-                        </svg>
-                      </button>
-                    </div>
-                  );
-                })}
-                {!trashRoots.length && (
-                  <div className="toolsEmpty">
-                    <i>
-                      <LinkIcon />
-                    </i>
-                    <strong>No hay eliminados</strong>
-                    <p>
-                      Los documentos eliminados permanecerán aquí durante cinco
-                      días.
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                {roots.map((document) => renderDocument(document))}
-                {!documents.length && (
-                  <div className="toolsEmpty">
-                    <i>
-                      <LinkIcon />
-                    </i>
-                    <strong>Aún no hay documentación</strong>
-                    <p>Crea el primer proyecto para documentar su proceso.</p>
-                  </div>
-                )}
-              </>
+            {roots.map((document) => renderDocument(document))}
+            {!documents.length && (
+              <div className="toolsEmpty">
+                <i>
+                  <LinkIcon />
+                </i>
+                <strong>Aún no hay documentación</strong>
+                <p>Crea el primer proyecto para documentar su proceso.</p>
+              </div>
             )}
           </div>
-          {!trashOpen && (
-            <div className="toolsActions">
-              <div className="anchor toolsAddAnchor">
-                <button
-                  type="button"
-                  className="addRow toolsAddButton"
-                  aria-expanded={addOpen}
-                  onClick={() => setAddOpen((current) => !current)}
+          <div className="toolsActions">
+            <div className="anchor toolsAddAnchor">
+              <button
+                type="button"
+                className="addRow toolsAddButton"
+                aria-expanded={addOpen}
+                onClick={() => setAddOpen((current) => !current)}
+              >
+                <PlusIcon />
+                <span>Agregar documento</span>
+              </button>
+              <Popover
+                open={addOpen}
+                onClose={() => setAddOpen(false)}
+                title="Nuevo documento"
+                placement="top"
+              >
+                <form
+                  className="addForm"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const name = projectName.trim();
+                    if (!name) return;
+                    createDocument(name);
+                    setProjectName('');
+                    setAddOpen(false);
+                  }}
                 >
-                  <PlusIcon />
-                  <span>Agregar documento</span>
-                </button>
-                <Popover
-                  open={addOpen}
-                  onClose={() => setAddOpen(false)}
-                  title="Nuevo documento"
-                  placement="top"
-                >
-                  <form
-                    className="addForm"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const name = projectName.trim();
-                      if (!name) return;
-                      createDocument(name);
-                      setProjectName('');
-                      setAddOpen(false);
-                    }}
-                  >
-                    <label>
-                      Nombre del proyecto
-                      <input
-                        autoFocus
-                        value={projectName}
-                        onChange={(event) => setProjectName(event.target.value)}
-                        placeholder="Ej. Apertura de nueva sucursal"
-                      />
-                    </label>
-                    <div className="formActions">
-                      <button type="button" onClick={() => setAddOpen(false)}>
-                        Cancelar
-                      </button>
-                      <button type="submit" className="confirm">
-                        Crear
-                      </button>
-                    </div>
-                  </form>
-                </Popover>
-              </div>
+                  <label>
+                    Nombre del proyecto
+                    <input
+                      autoFocus
+                      value={projectName}
+                      onChange={(event) => setProjectName(event.target.value)}
+                      placeholder="Ej. Apertura de nueva sucursal"
+                    />
+                  </label>
+                  <div className="formActions">
+                    <button type="button" onClick={() => setAddOpen(false)}>
+                      Cancelar
+                    </button>
+                    <button type="submit" className="confirm">
+                      Crear
+                    </button>
+                  </div>
+                </form>
+              </Popover>
             </div>
-          )}
+          </div>
         </aside>
         <div className="toolsViewer docsViewer">
           {active ? (
