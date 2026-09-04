@@ -2686,6 +2686,50 @@ td > button {
 .docsEditor .markdownAlertBody > :last-child {
   margin-bottom: 0;
 }
+.docsEditor .markdownDisclosure {
+  margin: 12px 0;
+  overflow: hidden;
+  border: 1px solid #dedee2;
+  border-radius: 12px;
+  background: #fff;
+  color: #333336;
+  white-space: normal;
+}
+.docsEditor .markdownDisclosure summary {
+  position: relative;
+  padding: 14px 42px 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.docsEditor .markdownDisclosure summary::-webkit-details-marker {
+  display: none;
+}
+.docsEditor .markdownDisclosure summary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid #6e6e73;
+  border-bottom: 1.5px solid #6e6e73;
+  transform: translateY(-65%) rotate(45deg);
+  transition: transform 160ms ease;
+}
+.docsEditor .markdownDisclosure[open] summary::after {
+  transform: translateY(-35%) rotate(225deg);
+}
+.docsEditor .markdownDisclosureBody {
+  padding: 0 16px 14px;
+  border-top: 1px solid #ededf0;
+}
+.docsEditor .markdownDisclosureBody > :first-child {
+  margin-top: 14px;
+}
+.docsEditor .markdownDisclosureBody > :last-child {
+  margin-bottom: 0;
+}
 .docsEditor p code,
 .docsEditor li code {
   padding: 2px 5px;
@@ -3013,18 +3057,20 @@ td > button {
   outline: none;
 }
 .deleteContextMenu .contextAddSubnote,
-.deleteContextMenu .contextAddFile {
+.deleteContextMenu .contextAddFile,
+.deleteContextMenu .contextChangeIcon {
   color: #424245;
 }
 .deleteContextMenu .contextAddSubnote:hover,
 .deleteContextMenu .contextAddSubnote:focus-visible,
 .deleteContextMenu .contextAddFile:hover,
-.deleteContextMenu .contextAddFile:focus-visible {
+.deleteContextMenu .contextAddFile:focus-visible,
+.deleteContextMenu .contextChangeIcon:hover,
+.deleteContextMenu .contextChangeIcon:focus-visible {
   background: #ededf0;
   color: #1d1d1f;
 }
-.deleteContextMenu .contextAddFile + button,
-.deleteContextMenu .contextAddSubnote + button:last-child {
+.deleteContextMenu .contextMenuDanger {
   margin-top: 4px;
   border-top: 1px solid #e5e5e7;
   border-radius: 0 0 8px 8px;

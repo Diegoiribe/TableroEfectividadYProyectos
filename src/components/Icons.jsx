@@ -26,6 +26,18 @@ export function LinkIcon() {
     </svg>
   );
 }
+export function FolderIcon() {
+  return (
+    <svg
+      className="resourceTypeIcon folderIcon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path fill="#5E9FE6" d="M2.8 6.1c0-1 .8-1.8 1.8-1.8h5l2 2.2h7.8c1 0 1.8.8 1.8 1.8v9.8c0 1-.8 1.8-1.8 1.8H4.6c-1 0-1.8-.8-1.8-1.8z" />
+      <path fill="#8BC0F4" d="M2.8 8.1h18.4v2H2.8z" />
+    </svg>
+  );
+}
 function getResourceKind(label = '', url = '') {
   const name = label.trim().toLowerCase();
   const link = url.trim().toLowerCase();

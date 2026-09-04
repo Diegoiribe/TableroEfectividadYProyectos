@@ -4,7 +4,7 @@ import 'katex/dist/katex.min.css';
 import mermaid from 'mermaid';
 import AppleSelect from './AppleSelect';
 import DeleteContextMenu from './DeleteContextMenu';
-import { ChevronIcon, LinkIcon, PlusIcon, ResourceIcon } from './Icons';
+import { ChevronIcon, FolderIcon, LinkIcon, PlusIcon, ResourceIcon } from './Icons';
 import Popover from './Popover';
 
 mermaid.initialize({
@@ -105,6 +105,13 @@ function isMarkdownTableDivider(line) {
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
+function restoreMarkdownEntities(value = '') {
+  return value
+    .replace(/\\?&lt;/g, '<')
+    .replace(/\\?&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
 function markdownToHtml(markdown = '') {
   const escaped = markdown
     .replace(/&/g, '&amp;')
@@ -117,6 +124,40 @@ function markdownToHtml(markdown = '') {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const next = lines[index + 1] ?? '';
+    const detailsOpening = line.trim().match(
+      /^\\?&lt;details(?:\s+(open))?&gt;$/i
+    );
+    if (detailsOpening) {
+      let summaryIndex = index + 1;
+      while (summaryIndex < lines.length && !lines[summaryIndex].trim()) {
+        summaryIndex += 1;
+      }
+      const summaryLine = lines[summaryIndex]?.trim() ?? '';
+      const summaryMatch = summaryLine.match(
+        /^\\?&lt;summary&gt;\s*(?:\\?&lt;strong&gt;)?([\s\S]*?)(?:\\?&lt;\/strong&gt;)?\s*\\?&lt;\/summary&gt;$/i
+      );
+      if (summaryMatch) {
+        const body = [];
+        let closingIndex = summaryIndex + 1;
+        while (
+          closingIndex < lines.length &&
+          !/^\\?&lt;\/details&gt;$/i.test(lines[closingIndex].trim())
+        ) {
+          body.push(lines[closingIndex]);
+          closingIndex += 1;
+        }
+        if (closingIndex < lines.length) {
+          const summary = restoreMarkdownEntities(summaryMatch[1]).trim();
+          const bodyMarkdown = restoreMarkdownEntities(body.join('\n')).trim();
+          const openAttribute = detailsOpening[1] ? ' open' : '';
+          output.push(
+            `<details class="markdownDisclosure"${openAttribute}><summary>${formatMarkdownInline(summary)}</summary><div class="markdownDisclosureBody">${markdownToHtml(bodyMarkdown)}</div></details>`
+          );
+          index = closingIndex;
+          continue;
+        }
+      }
+    }
     const alert = line.trim().match(
       /^(?:&gt;\s*)?\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i
     );
@@ -276,6 +317,23 @@ function markdownToHtml(markdown = '') {
 function editorToMarkdown(root) {
   const clone = root?.cloneNode(true);
   if (!clone) return '';
+  clone.querySelectorAll('details.markdownDisclosure').forEach((block) => {
+    const summaryNode = block.querySelector(':scope > summary');
+    const bodyNode = block.querySelector(':scope > .markdownDisclosureBody');
+    const summary = (summaryNode?.innerText || summaryNode?.textContent || '').trim();
+    const body = (bodyNode?.innerText || bodyNode?.textContent || '').trim();
+    const source = [
+      `<details${block.open ? ' open' : ''}>`,
+      `<summary><strong>${summary}</strong></summary>`,
+      '',
+      body,
+      '',
+      '</details>'
+    ].join('\n');
+    const disclosureBlock = window.document.createElement('div');
+    disclosureBlock.textContent = source;
+    block.replaceWith(disclosureBlock);
+  });
   clone.querySelectorAll('pre.markdownMermaid').forEach((block) => {
     const source = block.dataset.mermaidSource ||
       block.querySelector('code[data-language="mermaid"]')?.textContent || '';
@@ -380,9 +438,11 @@ function sanitizeHtml(html = '') {
     'OL',
     'P',
     'CODE',
+    'DETAILS',
     'PRE',
     'SPAN',
     'STRONG',
+    'SUMMARY',
     'TABLE',
     'TBODY',
     'TD',
@@ -408,7 +468,11 @@ function sanitizeHtml(html = '') {
         (node.tagName === 'CODE' && attribute.name === 'data-language' &&
           ['mermaid', 'math', 'inline-math'].includes(attribute.value)) ||
         (node.tagName === 'DIV' && attribute.name === 'class' &&
-          ['markdownMath', 'markdownAlertTitle', 'markdownAlertBody'].includes(attribute.value)) ||
+          ['markdownMath', 'markdownAlertTitle', 'markdownAlertBody',
+            'markdownDisclosureBody'].includes(attribute.value)) ||
+        (node.tagName === 'DETAILS' && attribute.name === 'class' &&
+          attribute.value === 'markdownDisclosure') ||
+        (node.tagName === 'DETAILS' && attribute.name === 'open') ||
         (node.tagName === 'ASIDE' && attribute.name === 'class' &&
           attribute.value.split(/\s+/).every((name) =>
             ['markdownAlert', 'markdownAlertNote', 'markdownAlertTip',
@@ -1122,6 +1186,7 @@ export default function DocsWorkspace({
   documents,
   onAddDocument,
   onUpdateDocument,
+  onUpdateDocumentIcon,
   onDeleteDocument
 }) {
   const [selectedId, setSelectedId] = useState(null);
@@ -1135,7 +1200,12 @@ export default function DocsWorkspace({
   const [expanded, setExpanded] = useState(() => new Set());
   const pressTimer = useRef(null);
   const longPressTriggered = useRef(false);
-  const active = documents.find((document) => document.id === selectedId);
+  const selectedDocument = documents.find(
+    (document) => document.id === selectedId
+  );
+  const active = selectedDocument?.icon === 'folder'
+    ? null
+    : selectedDocument;
   const activeLineage = useMemo(() => {
     const lineage = new Set();
     let current = documents.find((document) => document.id === selectedId);
@@ -1261,6 +1331,11 @@ export default function DocsWorkspace({
                 longPressTriggered.current = false;
                 return;
               }
+              if (docItem.icon === 'folder') {
+                setSelectedId(null);
+                if (children.length) toggleExpanded(docItem.id);
+                return;
+              }
               const closingPreview = selectedId === docItem.id;
               setSelectedId(closingPreview ? null : docItem.id);
               if (!closingPreview && children.length) {
@@ -1268,7 +1343,13 @@ export default function DocsWorkspace({
               }
             }}
           >
-            <i><ResourceIcon label={docItem.type === 'file' ? docItem.fileName : 'Docs'} url={docItem.type === 'file' ? docItem.fileName : 'https://docs.google.com/document'} /></i>
+            <i>
+              {docItem.type !== 'file' && docItem.icon === 'folder' ? (
+                <FolderIcon />
+              ) : (
+                <ResourceIcon label={docItem.type === 'file' ? docItem.fileName : 'Docs'} url={docItem.type === 'file' ? docItem.fileName : 'https://docs.google.com/document'} />
+              )}
+            </i>
             <span>
               <strong>{docItem.name}</strong>
             </span>
@@ -1412,6 +1493,26 @@ export default function DocsWorkspace({
           });
           setContextMenu(null);
         }}
+        iconMode={contextMenu?.resource?.icon === 'folder' ? 'folder' : 'docs'}
+        onToggleIcon={
+          contextMenu?.resource?.type !== 'file' &&
+          (contextMenu?.resource?.icon === 'folder' ||
+            documents.some((document) =>
+              document.parentId === contextMenu?.resource?.id
+            ))
+            ? () => {
+                if (!contextMenu?.resource) return;
+                onUpdateDocumentIcon(
+                  contextMenu.resource.id,
+                  contextMenu.resource.icon === 'folder' ? 'docs' : 'folder'
+                );
+                if (contextMenu.resource.icon !== 'folder') {
+                  setSelectedId(null);
+                }
+                setContextMenu(null);
+              }
+            : undefined
+        }
         onDelete={() => {
           if (!contextMenu?.resource) return;
           onDeleteDocument(contextMenu.resource.id);

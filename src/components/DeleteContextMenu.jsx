@@ -5,7 +5,9 @@ export default function DeleteContextMenu({
   onClose,
   onDelete,
   onAddSubnote,
-  onAddFile
+  onAddFile,
+  onToggleIcon,
+  iconMode = 'docs'
 }) {
   useEffect(() => {
     if (!menu) return;
@@ -23,9 +25,11 @@ export default function DeleteContextMenu({
 
   if (!menu) return null;
   const left = Math.min(menu.x, window.innerWidth - 172);
+  const itemCount = 1 + Number(Boolean(onAddSubnote)) +
+    Number(Boolean(onAddFile)) + Number(Boolean(onToggleIcon));
   const top = Math.min(
     menu.y,
-    window.innerHeight - (onAddSubnote || onAddFile ? 132 : 58)
+    window.innerHeight - (itemCount * 32 + 18)
   );
 
   return (
@@ -61,7 +65,28 @@ export default function DeleteContextMenu({
           <span>Agregar archivo</span>
         </button>
       )}
-      <button type="button" role="menuitem" onClick={onDelete}>
+      {onToggleIcon && (
+        <button
+          type="button"
+          role="menuitem"
+          className="contextChangeIcon"
+          onClick={onToggleIcon}
+        >
+          {iconMode === 'folder' ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 3h8l4 4v14H6zM14 3v4h4M9 11h6m-6 3h6m-6 3h4" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 7h7l2-2h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+            </svg>
+          )}
+          <span>
+            {iconMode === 'folder' ? 'Usar icono de Docs' : 'Usar icono de carpeta'}
+          </span>
+        </button>
+      )}
+      <button type="button" role="menuitem" className="contextMenuDanger" onClick={onDelete}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" />
         </svg>

@@ -138,6 +138,15 @@ export default function Dashboard() {
           : document
       )
     }));
+  const updateDocumentIcon = (id, icon) =>
+    setDashboard((current) => ({
+      ...current,
+      docs: (current.docs ?? []).map((document) =>
+        document.id === id
+          ? { ...document, icon, updatedAt: Date.now() }
+          : document
+      )
+    }));
   const deleteDocument = (id) =>
     setDashboard((current) => {
       const removedIds = new Set([id]);
@@ -286,6 +295,7 @@ export default function Dashboard() {
           documents={docs}
           onAddDocument={addDocument}
           onUpdateDocument={updateDocument}
+          onUpdateDocumentIcon={updateDocumentIcon}
           onDeleteDocument={deleteDocument}
         />
       )}
